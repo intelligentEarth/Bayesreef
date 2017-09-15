@@ -131,7 +131,7 @@ class MCMC():
         plt.clf()
 
         # PLOT SEDIMENT AND FLOW RESPONSE THRESHOLDS #
-        a_labels = ['Shallow windward', 'Moderate-deep windward', 'Deep windward']#, 'Shallow leeward', 'Moderate-deep leeward', 'Deep leeward']
+        a_labels = ['Shallow windward', 'Moderate-deep windward', 'Deep windward', 'Shallow leeward', 'Moderate-deep leeward', 'Deep leeward']
         
         sed1_mu, sed1_ub, sed1_lb, sed2_mu, sed2_ub, sed2_lb, sed3_mu, sed3_ub, sed3_lb, sed4_mu, sed4_ub, sed4_lb = (np.zeros(self.communities) for i in range(12))
         if ((self.sedsim != False)):
@@ -160,7 +160,7 @@ class MCMC():
                 fig = plt.figure(figsize=(6,4))
                 ax = fig.add_subplot(111)
                 ax.set_facecolor('#f2f2f3')
-                ax.plot(self.initial_sed[a,:], cy, linestyle='-', linewidth=self.width, marker='.',color='k', label='Synthetic data')
+                # ax.plot(self.initial_sed[a,:], cy, linestyle='-', linewidth=self.width, marker='.',color='k', label='Synthetic data')
                 ax.plot(cmu, cy, linestyle='-', linewidth=self.width, marker='.', label='Mean')
                 ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', label='5th Percentile')
                 ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', label='95th Percentile')
@@ -200,7 +200,7 @@ class MCMC():
                 fig = plt.figure(figsize=(6,4))
                 ax = fig.add_subplot(111)
                 ax.set_facecolor('#f2f2f3')
-                ax.plot(self.initial_flow[a,:], cy, linestyle='-', linewidth=self.width, marker='.', color='k',label='Synthetic data')
+                # ax.plot(self.initial_flow[a,:], cy, linestyle='-', linewidth=self.width, marker='.', color='k',label='Synthetic data')
                 ax.plot(cmu, cy, linestyle='-', linewidth=self.width, marker='.', label='Mean') #color='red',
                 ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', label='5th Percentile')#color='dodgerblue',
                 ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', label='95th Percentile')#color='coral',
@@ -424,8 +424,8 @@ class MCMC():
             pos_m[0], pos_ax[0], pos_ay[0], pos_rmse[0], pos_samples[0,])
         
         # print 'Begin sampling using MCMC random walk'
-        x_tick_labels = ['None','Shallow', 'Mod-deep', 'Deep', 'Sediment']
-        x_tick_values = [0, 0.143, 0.286, 0.429, 0.571]
+        x_tick_labels = ['None','W Shallow', 'W Mod-deep', 'W Deep', 'Sediment','L Shallow', 'L Mod-deep', 'L Deep']
+        x_tick_values = [0, 0.143, 0.286, 0.429, 0.571,0.714,0.857,1.0]
         fig = plt.figure(figsize=(3,6))
         ax = fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
@@ -434,7 +434,10 @@ class MCMC():
         ax.set_title("Plot of Data vs Initial Prediction", size=self.font+2)
         plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=self.font+1)
         ax.set_ylabel("Core depth [m]",size=self.font+1)
-        ax.set_ylim([0,30])
+        if self.communities == 3:
+            ax.set_ylim([0,30])
+        elif self.communities == 6:
+            ax.set_ylim([0,11.5])
         ax.set_ylim(ax.get_ylim()[::-1])
         plt.legend(frameon=False, prop={'size':self.font+1})
         fig.savefig('%s/begin.pdf' % (self.filename), bbox_inches='tight',dpi=300)
@@ -449,7 +452,10 @@ class MCMC():
         ax_append.set_title("Plot of Accepted Proposals", size=self.font+2)
         plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=self.font+1)
         ax_append.set_ylabel("Depth [m]",size=self.font+1)
-        ax_append.set_ylim([0,30])
+        if self.communities == 3:
+            ax_append.set_ylim([0,30])
+        elif self.communities == 6:
+            ax_append.set_ylim([0,11.5])
         ax_append.set_ylim(ax_append.get_ylim()[::-1])
 
 
@@ -635,16 +641,16 @@ def main():
     #    Set all input parameters    #
     random.seed(time.time())
     samples = 20000
-    description = 'RKF45, SYNTH 20,000 SAMPLES, CONSTRAINED'
-    nCommunities = 3
+    description = 'DORMANDPRINCE, SYNTH 20,000 SAMPLES, UNCONSTRAINED'
+    nCommunities = 6
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
-    xmlinput = 'input_synth.xml'
-    datafile = 'data/synth_core.txt'
+    xmlinput = 'input_synth_6.xml'
+    datafile = 'data/oti4.txt'
     core_depths, core_data = np.genfromtxt(datafile, usecols=(0,1), unpack = True) 
 
     vis = [False, False] # first for initialisation, second for cores
-    sedsim, flowsim = False, True
+    sedsim, flowsim = True, True
     run_nb = 0
     while os.path.exists('mcmcresults_%s' % (run_nb)):
         run_nb+=1
@@ -698,18 +704,24 @@ def main():
     sedlim_1 = [[0., 0.0035]]
     sedlim_2 = [[0.001,0.0035]]
     sedlim_3 = [[0.001,0.005]]
+    sedlim_4 = [[0.001,0.0035]]
+    sedlim_5 = [[0.002,0.004]]
+    sedlim_6 = [[0.002,0.005]]
 
     flowlim_1 = [[0.01,0.3]]
     flowlim_2 = [[0.,0.2]]
     flowlim_3 = [[0.,0.1]]
+    flowlim_4 = [[0.005,0.2]]
+    flowlim_5 = [[0.002,0.1]]
+    flowlim_6 = [[0.,0.1]]
     
     sedlimits = []
     flowlimits = []
 
     if sedsim == True:
-        sedlimits = np.concatenate((sedlim_1,sedlim_2,sedlim_3))#sedlim_4,sedlim_5,sedlim_6))
+        sedlimits = np.concatenate((sedlim_1,sedlim_2,sedlim_3,sedlim_4,sedlim_5,sedlim_6))
     if flowsim == True:
-        flowlimits = np.concatenate((flowlim_1,flowlim_2,flowlim_3))#flowlim_4,flowlim_5,flowlim_6))
+        flowlimits = np.concatenate((flowlim_1,flowlim_2,flowlim_3,flowlim_4,flowlim_5,flowlim_6))
 
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, timestep,  filename, xmlinput, 
                 sedsim, sedlimits, flowsim,flowlimits, vis)
@@ -741,7 +753,7 @@ def main():
 
     if not os.path.isfile(('%s/out_GLVE.txt' % (filename))):
             with file(('%s/out_GLVE.txt' % (filename)),'w') as outfile:
-                outfile.write('{0}\n{1}\n{2}'.format(pos_m.T,pos_ax.T,pos_ay.T))
+                outfile.write('#pos_m{0}\n#pos_ax{1}\n#pos_ay{2}'.format(pos_m.T,pos_ax.T,pos_ay.T))
 
     fx_mu = fx_train.mean(axis=0)
     fx_high = np.percentile(fx_train, 95, axis=0)
@@ -754,11 +766,14 @@ def main():
     plt.plot(fx_high,x_data, label='Pred. (95th %ile)',linewidth=1,linestyle='--')
     plt.fill_betweenx(x_data, fx_low, fx_high, facecolor='mediumaquamarine', alpha=0.4, label=None)
     plt.title("Plot of Core Data vs MCMC Uncertainty", size=mcmc.font+2)
-    plt.ylim(0,30)
+    if nCommunities == 3:
+        plt.ylim([0,30])
+    elif nCommunities == 6:
+        plt.ylim([0,11.5])
     plt.ylim(plt.ylim()[::-1])
     plt.ylabel('Depth [m]', size=mcmc.font+1)
-    x_tick_labels = ['None','Shallow', 'Mod-deep', 'Deep', 'Sediment']
-    x_tick_values = [0, 0.143, 0.286, 0.429, 0.571]
+    x_tick_labels = ['None','W Shallow', 'W Mod-deep', 'W Deep', 'Sediment','L Shallow', 'L Mod-deep', 'L Deep']
+    x_tick_values = [0, 0.143, 0.286, 0.429, 0.571,0.714,0.857,1.0]
     plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=mcmc.font+1)
     plt.legend(frameon=False, prop={'size':mcmc.font+1})
     plt.savefig('%s/mcmcres.pdf' % (filename),bbox_inches='tight', dpi=300)
@@ -946,7 +961,7 @@ def main():
                 v_flow[:,i] = pos_v[:,com_6[i-16]]
 
 
-            mpl_fig = plt.figure(figsize=(14,4))
+            mpl_fig = plt.figure(figsize=(18,4))
             ax = mpl_fig.add_subplot(111)
             ax.spines['top'].set_color('none')
             ax.spines['bottom'].set_color('none')
@@ -963,7 +978,7 @@ def main():
             ax3 = mpl_fig.add_subplot(133)
             ax3.boxplot(v_flow)
             ax3.set_xlabel('Assemblage flow exposure thresholds', size=mcmc.font+2)
-            lt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
+            plt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
             # mpl_fig = plt.figure(figsize=(10,4))
             # ax = mpl_fig.add_subplot(111)
             # ax.boxplot(new_v)

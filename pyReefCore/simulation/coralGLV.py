@@ -70,7 +70,7 @@ class coralGLV:
         """
         
         # RKF initialisation
-        odeRKF = odespy.RKF45(self._functionGLV, atol=self.atol,
+        odeRKF = odespy.DormandPrince(self._functionGLV, atol=self.atol,
                                    rtol=self.rtol, min_step=self.min_step)
 
         return odeRKF
