@@ -30,7 +30,7 @@ class coralGLV:
         # RKF relative tolerance for solution
         self.rtol = 1.e-8#1.e-6
         # RKF absolute tolerance for solution
-        self.atol = 1.e-10#1.e-8
+        self.atol = 1.e-12#1.e-8
         # RKF minimum step size for an adaptive algorithm.
         self.min_step = 1.e-4
         # Definition of the intrinsic rate of a population species
@@ -70,7 +70,7 @@ class coralGLV:
         """
         
         # RKF initialisation
-        odeRKF = odespy.DormandPrince(self._functionGLV, atol=self.atol,
+        odeRKF = odespy.RKF45(self._functionGLV, atol=self.atol,
                                    rtol=self.rtol, min_step=self.min_step)
 
         return odeRKF

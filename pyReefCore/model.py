@@ -334,7 +334,7 @@ class Model(object):
 
     def convert_core(self, communities, output_core, core_depths):
         # print 'output_core', output_core
-        predicted_core = np.zeros(core_depths.size)        
+        predicted_core = np.zeros(core_depths.size)    
         if (communities == 3): 
             comm_1 = output_core[0,:].flatten()
             comm_2 = output_core[1,:].flatten()
