@@ -56,6 +56,11 @@ class MCMC():
         self.d_sedprop = float(np.count_nonzero(core_data == 0.571))/core_data.shape[0]
         self.initial_sed = []
         self.initial_flow = []
+        self.step_m = 0.002#0.005#0.005#0.01
+        self.step_a = 0.002#0.005#0.005#0.005 
+        self.step_sed = 0.0001#0.00025#0.00025#0.001 
+        self.step_flow = 0.0015#0.015#0.05 
+        self.step_eta = 0.001#0.001
 
     def run_Model(self, reef, input_vector):
 
@@ -90,7 +95,6 @@ class MCMC():
         mmedian=str(np.median(pos_m))
         mmode=str(stats.mode(pos_m))
     
-
         fig = plt.figure(figsize=(6,8))
         ax = fig.add_subplot(111)
         ax.spines['top'].set_color('none')
@@ -99,11 +103,16 @@ class MCMC():
         ax.spines['right'].set_color('none')
         ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
         ax.set_title(' Malthusian Parameter', fontsize= self.font+2)#, y=1.02)
-        ax.axvline(mmean,ymin=0,ymax=1,color='k',linestyle='--')
-        # ax.set_ylim(0,1)
+        # ax.axvline(mmean,ymin=0,ymax=1,color='k',linestyle='--')
+        # # ax.set_ylim(0,1)
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_m, bins=25, alpha=0.5, facecolor='sandybrown', normed=True)
+        ax1.axvline(mm,linestyle='-', color='black', linewidth=1,label='Mean')
+        ax1.axvline(mm+ms,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
+        ax1.axvline(mm-ms,linestyle='--', color='black', linewidth=1,label=None)
+        # ax1.axvline(0.004,linestyle='-', color='orangered', linewidth=1,label=None)
+
         # ax1.plot(mspace,pdf_m,label='Best fit',color='orangered',linestyle='--')
         ax1.grid(True)
         ax1.set_ylabel('Frequency',size=self.font+1)
@@ -117,7 +126,7 @@ class MCMC():
         ax2.set_xlim([0,np.amax(slen)])
         fig.tight_layout()
         fig.subplots_adjust(top=0.88)
-        plt.savefig('%s/malthus.png'% (self.filename), dpi=300, transparent=True)
+        plt.savefig('%s/malthus.png'% (self.filename), bbox_inches='tight', dpi=300, transparent=False)
         plt.clf()
         
         #    COMMUNITY MATRIX   #
@@ -149,11 +158,14 @@ class MCMC():
         ax.spines['right'].set_color('none')
         ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
         ax.set_title('Community Interaction Matrix Parameters', fontsize= self.font+2, y=1.03)
-        ax.axvline(mmean,ymin=0,ymax=1,color='k',linestyle='--')
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_ax, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
         # ax1.plot(a1space,pdf_a1,label='Best fit',color='orangered',linestyle='--')
+        ax1.axvline(a1m,linestyle='-', color='black', linewidth=1,label='Mean')
+        ax1.axvline(a1m+a1s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
+        ax1.axvline(a1m-a1s,linestyle='--', color='black', linewidth=1,label=None)
+        # ax1.axvline(-0.0005,linestyle='-', color='orangered', linewidth=1,label=None)
         ax1.grid(True)
         ax1.set_ylabel('Frequency',size=self.font+1)
         ax1.set_title(r'Main diagonal value ($\alpha_{ii}$)',size=self.font+2)
@@ -167,8 +179,9 @@ class MCMC():
         ax2.set_xlim([0,np.amax(slen)])
         fig.tight_layout()
         fig.subplots_adjust(top=0.88)
-        plt.savefig('%s/comm_ax.png'% (self.filename), dpi=300,transparent=True)
+        plt.savefig('%s/comm_ax.png'% (self.filename),bbox_inches='tight', dpi=300,transparent=False)
         plt.clf()
+
         ####   sub- and super-diagonal  
         fig = plt.figure(figsize=(6,8))
         ax = fig.add_subplot(111)
@@ -178,10 +191,14 @@ class MCMC():
         ax.spines['right'].set_color('none')
         ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
         ax.set_title('Community Interaction Matrix Parameters', fontsize= self.font+2, y=1.03)
-        ax.axvline(mmean,ymin=0,ymax=1,color='k',linestyle='--')
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_ay, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
+        ax1.axvline(a2m,linestyle='-', color='black', linewidth=1,label='Mean')
+        ax1.axvline(a2m+a2s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
+        ax1.axvline(a2m-a2s,linestyle='--', color='black', linewidth=1,label=None)
+        # ax1.axvline(-0.0001,linestyle='-', color='orangered', linewidth=1,label=None)
+
         # ax1.plot(a2space,pdf_a2,label='Best fit',color='orangered',linestyle='--')
         ax1.grid(True)
         ax1.set_title(r'Super- and sub-diagonal values ($\alpha_{i,i+1}$ and $\alpha_{i+1,i}$)',size=self.font+2)
@@ -196,7 +213,7 @@ class MCMC():
         ax2.set_xlim([0,np.amax(slen)])
         fig.tight_layout()
         fig.subplots_adjust(top=0.88)
-        plt.savefig('%s/comm_ay.png' % (self.filename), dpi=300,transparent=True)
+        plt.savefig('%s/comm_ay.png' % (self.filename), dpi=300, bbox_inches='tight',transparent=False)
         plt.clf()
 
         if not os.path.isfile(('%s/summ_stats.txt' % (self.filename))):
@@ -259,26 +276,30 @@ class MCMC():
                     outfile.write('# Sed3\n{0}, {1}, {2}, {3}\n'.format(sed3_min,sed3_max,sed3_mu_,sed3_med))
                     outfile.write('# Sed4\n{0}, {1}, {2}, {3}\n'.format(sed4_min,sed4_max,sed4_mu_,sed4_med))
 
-                cy = [0,1,1,0]
+                cy = [0,100,100,0]
                 cmu = [sed1_mu[a], sed2_mu[a], sed3_mu[a], sed4_mu[a]]
-                c_lb = [sed1_lb[a], sed2_lb[a], sed3_lb[a], sed4_lb[a]]
-                c_ub = [sed1_ub[a], sed2_ub[a], sed3_ub[a], sed4_ub[a]]
+                # c_lb = [sed1_lb[a], sed2_lb[a], sed3_lb[a], sed4_lb[a]]
+                # c_ub = [sed1_ub[a], sed2_ub[a], sed3_ub[a], sed4_ub[a]]
+                c_lb = [sed1_mu[a]-sed1_lb[a], sed2_mu[a]-sed2_lb[a], sed3_mu[a]-sed3_lb[a], sed4_mu[a]-sed4_lb[a]]
+                c_ub = [sed1_ub[a]-sed1_mu[a], sed2_ub[a]-sed2_mu[a], sed3_ub[a]-sed3_mu[a], sed4_ub[a]-sed4_mu[a]]
                 
                 fig = plt.figure(figsize=(6,4))
                 ax = fig.add_subplot(111)
                 ax.set_facecolor('#f2f2f3')
-                ax.plot(self.initial_sed[a,:], cy, linestyle='-', linewidth=self.width, marker='.',color='k', label='Synthetic data')
-                ax.plot(cmu, cy, linestyle='-', linewidth=self.width, marker='.', color='sandybrown', label='Mean')
-                ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', color='sandybrown', label=None)
-                ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', color='sandybrown', label=None)
-                if sed3_lb[a] > sed2_ub[a]:
-                    ax.fill_betweenx(cy,c_lb,c_ub, facecolor='sandybrown', alpha=0.4, label='90% confidence interval')
+                ax.plot(self.initial_sed[a,:], cy, linestyle='--', linewidth=self.width, marker='.',color='k', label='Synthetic data')
+                ax.plot(cmu, cy, linestyle='-', linewidth=self.width,marker='.', color='sandybrown', label='Mean')
+                ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1, color='darksalmon',mfc='darksalmon',fmt='.',label=None)
+                ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1, color='sienna',mfc='sienna',fmt='.',label=None)
+                # ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', color='sandybrown', label=None)
+                # ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', color='sandybrown', label=None)
+                # if sed3_lb[a] > sed2_ub[a]:
+                #     ax.fill_betweenx(cy,c_lb,c_ub, facecolor='sandybrown', alpha=0.4, label='90% confidence interval')
                 plt.title('Sediment exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=self.font+2, y=1.06)
                 plt.ylabel('Proportion of maximum growth rate [%]',size=self.font+1)
                 plt.xlabel('Sediment input [m/year]',size=self.font+1)
-                plt.ylim(0.,1.1)
+                plt.ylim(-2.,110)
                 lgd = plt.legend(frameon=False, prop={'size':self.font+1}, bbox_to_anchor = (1.,0.2))
-                plt.savefig('%s/sediment_response_%s.png' % (self.filename, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=True)
+                plt.savefig('%s/sediment_response_%s.png' % (self.filename, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=False)
                 plt.clf()
 
         flow1_mu, flow1_ub,flow1_lb, flow2_mu, flow2_ub,flow2_lb, flow3_mu, flow3_ub,flow3_lb, flow4_mu, flow4_ub,flow4_lb = (np.zeros(self.communities) for i in range(12))
@@ -325,27 +346,31 @@ class MCMC():
                     outfile.write('# flow3\n{0}, {1}, {2}, {3}\n'.format(flow3_min,flow3_max,flow3_mu_,flow3_med))
                     outfile.write('# flow4\n{0}, {1}, {2}, {3}\n'.format(flow4_min,flow4_max,flow4_mu_,flow4_med))
                 
-                cy = [0,1,1,0]
+                cy = [0,100,100,0]
                 cmu = [flow1_mu[a], flow2_mu[a], flow3_mu[a], flow4_mu[a]]
-                c_ub = [flow1_lb[a], flow2_lb[a], flow3_lb[a], flow4_lb[a]]
-                c_lb = [flow1_ub[a], flow2_ub[a], flow3_ub[a], flow4_ub[a]]
+                c_lb = [flow1_mu[a]-flow1_lb[a], flow2_mu[a]-flow2_lb[a], flow3_mu[a]-flow3_lb[a], flow4_mu[a]-flow4_lb[a]]
+                c_ub = [flow1_ub[a]-flow1_mu[a], flow2_ub[a]-flow2_mu[a], flow3_ub[a]-flow3_mu[a], flow4_ub[a]-flow4_mu[a]]
+                # c_ub = [flow1_lb[a], flow2_lb[a], flow3_lb[a], flow4_lb[a]]
+                # c_lb = [flow1_ub[a], flow2_ub[a], flow3_ub[a], flow4_ub[a]]
 
                 
                 fig = plt.figure(figsize=(6,4))
                 ax = fig.add_subplot(111)
                 ax.set_facecolor('#f2f2f3')
-                ax.plot(self.initial_flow[a,:], cy, linestyle='-', linewidth=self.width, marker='.', color='k',label='Synthetic data')
+                ax.plot(self.initial_flow[a,:], cy, linestyle='--', linewidth=self.width, marker='.', color='k',label='Synthetic data')
                 ax.plot(cmu, cy, linestyle='-', linewidth=self.width, marker='.', color='steelblue', label='Mean')
-                ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', color='lightsteelblue', label=None)
-                ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', color='lightsteelblue', label=None)
-                if flow3_lb[a] > flow2_ub[a]:
-                    ax.fill_betweenx(cy,c_lb,c_ub, facecolor='lightsteelblue',alpha=0.4, label='90% confidence interval')
+                ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1,color='lightsteelblue',mfc='lightsteelblue',fmt='.',label=None)
+                ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1,color='lightslategrey',mfc='lightslategrey',fmt='.',label=None)
+                # ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', color='lightsteelblue', label=None)
+                # ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', color='lightsteelblue', label=None)
+                # if flow3_lb[a] > flow2_ub[a]:
+                #     ax.fill_betweenx(cy,c_lb,c_ub, facecolor='lightsteelblue',alpha=0.4, label='90% confidence interval')
                 plt.title('Hydrodynamic energy exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=self.font+2, y=1.06)
                 plt.ylabel('Proportion of maximum growth rate [%]', size=self.font+1)
                 plt.xlabel('Fluid flow [m/sec]', size=self.font+1)
-                plt.ylim(0.,1.1)
+                plt.ylim(-2.,110.)
                 lgd = plt.legend(frameon=False, prop={'size':self.font+1}, bbox_to_anchor = (1.,0.2))
-                plt.savefig('%s/flow_response_%s.png' % (self.filename, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=True)
+                plt.savefig('%s/flow_response_%s.png' % (self.filename, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
                 plt.clf()
 
     def save_params(self,naccept, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4, pos_m, pos_ax, pos_ay, pos_rmse, pos_samples):    ### SAVE RECORD OF ACCEPTED PARAMETERS ###
@@ -529,12 +554,6 @@ class MCMC():
         pos_v = np.zeros((samples, v_proposal.size))
         print v_proposal
 
-        step_m = 0.002#0.005#0.01
-        step_a = 0.002#0.005#0.005 
-        step_sed = 0.0001#0.00025#0.001 
-        step_flow = 0.006#0.015#0.05 
-        step_eta = 0.0001#0.001
-
         # Declare pyReef-Core and initialize
         reef = Model()
 
@@ -571,7 +590,7 @@ class MCMC():
         ax.set_ylim([0,np.amax(self.core_depths)])
         ax.set_ylim(ax.get_ylim()[::-1])
         plt.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
-        fig.savefig('%s/begin.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=True)
+        fig.savefig('%s/begin.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
         plt.clf()
         
         # ACCUMULATED FIGURE SET UP
@@ -596,7 +615,7 @@ class MCMC():
                 tmatrix = tmat.T
                 for x in range(0,self.communities):#-3):
                     for s in range(0,tmatrix.shape[1]):
-                        tmatrix[x,s] = tmatrix[x,s] + np.random.normal(0,step_sed)
+                        tmatrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
                         if tmatrix[x,s] >= self.sedlimits[x,1]:
                             tmatrix[x,s] = self.sedlimits[x,1]
                         elif tmatrix[x,s] <= self.sedlimits[x,0]:
@@ -617,7 +636,7 @@ class MCMC():
                 tmatrix = tmat.T
                 for x in range(0,self.communities):#-3):
                     for s in range(0,tmatrix.shape[1]):
-                        tmatrix[x,s] = tmatrix[x,s] + np.random.normal(0,step_flow)
+                        tmatrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
                         if tmatrix[x,s] >= self.flowlimits[x,1]:
                             tmatrix[x,s] = self.flowlimits[x,1]
                         elif tmatrix[x,s] <= self.flowlimits[x,0]:
@@ -633,17 +652,17 @@ class MCMC():
                 p_flow3 = tmat[2,:]
                 p_flow4 = tmat[3,:]
 
-            p_ax = cm_ax + np.random.normal(0,step_a,1)
+            p_ax = cm_ax + np.random.normal(0,self.step_a,1)
             if p_ax > 0:
                 p_ax = cm_ax
             elif p_ax < max_a:
                 p_ax = cm_ax
-            p_ay = cm_ay + np.random.normal(0,step_a,1)
+            p_ay = cm_ay + np.random.normal(0,self.step_a,1)
             if p_ay > 0:
                 p_ay = cm_ay
             elif p_ay < max_a:
                 p_ay = cm_ay   
-            p_m = m + np.random.normal(0,step_m,1)
+            p_m = m + np.random.normal(0,self.step_m,1)
             if p_m < 0:
                 p_m = m
             elif p_m > max_m:
@@ -657,7 +676,7 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            eta_pro = eta + np.random.normal(0, step_eta, 1)
+            eta_pro = eta + np.random.normal(0, self.step_eta, 1)
             tau_pro = math.exp(eta_pro)
             [likelihood_proposal, pred_data, rmse] = self.likelihood_func(reef, self.core_data, v_proposal, tau_pro)
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
@@ -747,7 +766,7 @@ class MCMC():
         accept_ratio = accepted_count / (samples * 1.0) * 100
 
         lgd = ax_append.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
-        final_fig.savefig('%s/proposals.png'% (self.filename), extra_artists = (lgd,),bbox_inches='tight',dpi=300,transparent=True)
+        final_fig.savefig('%s/proposals.png'% (self.filename), extra_artists = (lgd,),bbox_inches='tight',dpi=300,transparent=False)
         plt.clf()
 
         ##### PLOT RMSE EVOLUTION ########
@@ -760,7 +779,7 @@ class MCMC():
         plt.ylabel("RMSE", size=self.font+1)
         plt.xlabel("Number of samples", size=self.font+1)
         plt.xlim(0,len(pos_rmse)-1)
-        plt.savefig('%s/rmse_evolution.png' % (self.filename), dpi=300,transparent=True)
+        plt.savefig('%s/rmse_evolution.png' % (self.filename), dpi=300,transparent=False)
         plt.clf()
 
         return (pos_v, pos_tau, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_rmse, accept_ratio, accepted_count)
@@ -775,8 +794,8 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples = 5
-    description = 'step_m, step_a = 0.002 (0.01),step_sed = 0.0001, step_flow = 0.006, step_eta=0.0001'
+    samples = 80000
+    description = 'step_m, step_a = 0.1, 0.002 (0.01),step_sed = 0.0001, step_flow = 0.006, step_eta=0.0001'
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
@@ -799,7 +818,7 @@ def main():
             outfile.write('Test Description\n')
             outfile.write(description)
             outfile.write('\nSpecifications')
-            outfile.write('\n\tmcmc_1dv.py')
+            outfile.write('\n\tmcmc.py')
             outfile.write('\n\tSimulation time: {0} yrs'.format(simtime))
             outfile.write('\n\tSediment simulated: {0}'.format(sedsim))
             outfile.write('\n\tFlow simulated: {0}'.format(flowsim))
@@ -904,7 +923,7 @@ def main():
     x_tick_values = [0, 0.143, 0.286, 0.429, 0.571]
     plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=mcmc.font+1)
     plt.legend(frameon=False, prop={'size':mcmc.font+1}, bbox_to_anchor = (1.,0.2))
-    plt.savefig('%s/mcmcres.png' % (filename), bbox_inches='tight', dpi=300,transparent=True)
+    plt.savefig('%s/mcmcres.png' % (filename), bbox_inches='tight', dpi=300,transparent=False)
     plt.clf()
 
     #      MAKE BOX PLOT     #
@@ -939,7 +958,7 @@ def main():
             ax2 = mpl_fig.add_subplot(122)
             ax2.boxplot(new_v)
             ax2.set_xlabel('Assemblage exposure thresholds', size=mcmc.font+2)
-            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=True)
+            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             plt.clf()
         elif ((sedsim == True) and (flowsim == True)):
             v_glve = np.zeros((pos_v.shape[0],3))
@@ -982,7 +1001,7 @@ def main():
             ax3 = mpl_fig.add_subplot(133)
             ax3.boxplot(v_flow)
             ax3.set_xlabel('Assemblage flow exposure thresholds', size=mcmc.font+2)
-            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=True)
+            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             # mpl_fig = plt.figure(figsize=(10,4))
             # ax = mpl_fig.add_subplot(111)
             # ax.boxplot(new_v)
@@ -1013,7 +1032,7 @@ def main():
             for i in range(12,16):
                 new_v[:,i] = pos_v[:,com_4[i-12]]
             for i in range(16,20):
-                new_v[:,i] = pos_v[:,com_5[i-16]]
+                new_v[:,i] = pos_v[:,com_5  [i-16]]
             for i in range(20,24):
                 new_v[:,i] = pos_v[:,com_6[i-20]]
 
@@ -1031,7 +1050,7 @@ def main():
             ax2 = mpl_fig.add_subplot(122)
             ax2.boxplot(new_v)
             ax2.set_xlabel('Assemblage exposure thresholds', size=mcmc.font+2)
-            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=True)
+            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             # for i in range(3,7):
             #     new_v[:,i] = pos_v[:,com_1[i-3]]
             # for i in range(7,11):
@@ -1106,7 +1125,7 @@ def main():
             ax3 = mpl_fig.add_subplot(133)
             ax3.boxplot(v_flow)
             ax3.set_xlabel('Assemblage flow exposure thresholds', size=mcmc.font+2)
-            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=True)
+            plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             # mpl_fig = plt.figure(figsize=(10,4))
             # ax = mpl_fig.add_subplot(111)
             # ax.boxplot(new_v)
