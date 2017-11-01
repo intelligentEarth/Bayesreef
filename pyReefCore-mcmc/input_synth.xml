@@ -29,7 +29,7 @@
 			<!-- Community name needs to be lower than 10 characters -->
 			<!-- Community Definition -->
 			<!-- Shallow assemblage -->
-			<name>W1-Shal</name>
+			<name>Shallow</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
                  considered population of Community (Malthusian parameter). -->
 			<malthus>0.004</malthus>
@@ -43,7 +43,7 @@
 		<!-- Medium assemblage (6-20 m), similar to tabular/branching coral facies of Indo-Pacific. Represents growth at beginning of 'catch-up' reef -->
 		<species>
 			<!-- Community name needs to be lower than 10 characters -->
-			<name>W2-Mod</name>
+			<name>Mod-deep</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
 				 considered population of Community (Malthusian parameter). -->
 			<malthus>0.004</malthus>
@@ -57,7 +57,7 @@
 		<!-- Deep assemblage (20-30 m), of domal/branching and encrusting types. Represents reef-drowning events -->
 		<species>
 			<!-- Community name needs to be lower than 10 characters -->
-			<name>W3-Deep</name>
+			<name>Deep</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
 				 considered population of Community (Malthusian parameter). -->
 			<malthus>0.004</malthus>
