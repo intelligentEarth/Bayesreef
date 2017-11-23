@@ -352,6 +352,9 @@ class modelPlot():
         # print 'p2[:,ids]',p2[:,ids]
         # print 'p2,',p2
         # print'p2.shape', p2.shape
+        # print 'p3[:,ids]',p3[:,ids]
+        # print 'p3,',p3
+        # print'p3.shape', p3.shape
         p3[:,ids] = np.cumsum(self.sedH[:,ids]/self.depth[ids],axis=0) #
         bottom = self.surf + self.depth[:-1].sum()
         d = bottom - np.cumsum(self.depth[:-1])
