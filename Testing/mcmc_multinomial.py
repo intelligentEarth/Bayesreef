@@ -1,19 +1,9 @@
 # !/usr/bin/python
-# MCMC random walk method applied to pyReef-Core
+# BayesReef: a MCMC random walk method applied to pyReef-Core
 # Authors: Jodie Pall and Danial Azam (2017)
-# Adapted from:
-# MCMC Random Walk for Feedforward Neural Network for One-Step-Ahead Chaotic Time Series Prediction
-# Data (Sunspot and Lazer). Taken' Theorem used for Data Reconstruction (Dimension = 4, Timelag = 2).
-# Data procesing file is included.
-# RMSE (Root Mean Squared Error)
-# based on: https://github.com/rohitash-chandra/FNN_TimeSeries
-# based on: https://github.com/rohitash-chandra/mcmc-randomwalk
-# Rohitash Chandra, Centre for Translational Data Science
-# University of Sydey, Sydney NSW, Australia.  2017 c.rohitash@gmail.conm
-# https://www.researchgate.net/profile/Rohitash_Chandra
-# Reference for publication for this code
-# [Chandra_ICONIP2017] R. Chandra, L. Azizi, S. Cripps, 'Bayesian neural learning via Langevin dynamicsfor chaotic time series prediction', ICONIP 2017.
+# Adapted from: [Chandra_ICONIP2017] R. Chandra, L. Azizi, S. Cripps, 'Bayesian neural learning via Langevin dynamicsfor chaotic time series prediction', ICONIP 2017.
 # (to be addeded on https://www.researchgate.net/profile/Rohitash_Chandra)
+
 import os
 import math
 import time
@@ -23,15 +13,9 @@ import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 from pyReefCore.model import Model
 import fnmatch
-import shutil
-from PIL import Image
-from io import StringIO
 import matplotlib as mpl
 from cycler import cycler
 from scipy import stats 
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
-import numpy.ma as ma
 
 cmap=plt.cm.Set2
 c = cycler('color', cmap(np.linspace(0,1,8)) )
@@ -54,16 +38,15 @@ class MCMC():
         self.simtime = simtime
         self.font = 10
         self.width = 1
-        self.d_sedprop = float(np.count_nonzero(core_data == 0.571))/core_data.shape[0]
+        self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
         self.initial_sed = []
         self.initial_flow = []
-        self.step_m = 0.002#0.005#0.005#0.01
-        self.step_a = 0.002#0.005#0.005#0.005 
-        self.step_sed = 0.0001#0.00025#0.00025#0.001 
-        self.step_flow = 0.0015#0.015#0.05 
+        self.step_m = 0.002 
+        self.step_a = 0.002  
+        self.step_sed = 0.0001 
+        self.step_flow = 0.0015
 
     def run_Model(self, reef, input_vector):
-
         reef.convert_vector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
         self.initial_sed, self.initial_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
         if self.vis[0] == True:
@@ -92,7 +75,7 @@ class MCMC():
         pdf_m = stats.norm.pdf(mspace,mm,ms)
         mmean=np.mean(pos_m)
         mmedian=np.median(pos_m)
-        mmode=stats.mode(pos_m)
+        mmode, count= stats.mode(pos_m)
     
         fig = plt.figure(figsize=(6,8))
         ax = fig.add_subplot(111)
@@ -102,15 +85,13 @@ class MCMC():
         ax.spines['right'].set_color('none')
         ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
         ax.set_title(' Malthusian Parameter', fontsize= self.font+2)#, y=1.02)
-        # ax.axvline(mmean,ymin=0,ymax=1,color='k',linestyle='--')
-        # # ax.set_ylim(0,1)
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_m, bins=25, alpha=0.5, facecolor='sandybrown', normed=True)
-        ax1.axvline(mm,linestyle='-', color='black', linewidth=1,label='Mean')
-        ax1.axvline(mm+ms,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
-        ax1.axvline(mm-ms,linestyle='--', color='black', linewidth=1,label=None)
-        # ax1.axvline(0.004,linestyle='-', color='orangered', linewidth=1,label=None)
+        # ax1.axvline(mm,linestyle='-', color='black', linewidth=1,label='Mean')
+        # ax1.axvline(mm+ms,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
+        # ax1.axvline(mm-ms,linestyle='--', color='black', linewidth=1,label=None)
+        ax1.axvline(mmode,linestyle='-', color='orangered', linewidth=1,label=None)
 
         # ax1.plot(mspace,pdf_m,label='Best fit',color='orangered',linestyle='--')
         ax1.grid(True)
@@ -141,12 +122,12 @@ class MCMC():
         a1max=a1max
         a1mean=np.mean(pos_ax)
         a1median=np.median(pos_ax)
-        a1mode=stats.mode(pos_ax)
+        a1mode, count=stats.mode(pos_ax)
         a2min=a2min
         a2max=a2max
         a2mean=np.mean(pos_ay)
         a2median=np.median(pos_ay)
-        a2mode=stats.mode(pos_ay)
+        a2mode, count=stats.mode(pos_ay)
 
         ####   main diagonal   
         fig = plt.figure(figsize=(6,8))
@@ -161,10 +142,10 @@ class MCMC():
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_ax, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
         # ax1.plot(a1space,pdf_a1,label='Best fit',color='orangered',linestyle='--')
-        ax1.axvline(a1m,linestyle='-', color='black', linewidth=1,label='Mean')
-        ax1.axvline(a1m+a1s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
-        ax1.axvline(a1m-a1s,linestyle='--', color='black', linewidth=1,label=None)
-        # ax1.axvline(-0.0005,linestyle='-', color='orangered', linewidth=1,label=None)
+        # ax1.axvline(a1m,linestyle='-', color='black', linewidth=1,label='Mean')
+        # ax1.axvline(a1m+a1s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
+        # ax1.axvline(a1m-a1s,linestyle='--', color='black', linewidth=1,label=None)
+        ax1.axvline(a1mode,linestyle='-', color='orangered', linewidth=1,label=None)
         ax1.grid(True)
         ax1.set_ylabel('Frequency',size=self.font+1)
         ax1.set_title(r'Main diagonal value ($\alpha_{ii}$)',size=self.font+2)
@@ -193,10 +174,10 @@ class MCMC():
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_ay, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
-        ax1.axvline(a2m,linestyle='-', color='black', linewidth=1,label='Mean')
-        ax1.axvline(a2m+a2s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
-        ax1.axvline(a2m-a2s,linestyle='--', color='black', linewidth=1,label=None)
-        # ax1.axvline(-0.0001,linestyle='-', color='orangered', linewidth=1,label=None)
+        # ax1.axvline(a2m,linestyle='-', color='black', linewidth=1,label='Mean')
+        # ax1.axvline(a2m+a2s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
+        # ax1.axvline(a2m-a2s,linestyle='--', color='black', linewidth=1,label=None)
+        ax1.axvline(a2mode,linestyle='-', color='orangered', linewidth=1,label=None)
 
         # ax1.plot(a2space,pdf_a2,label='Best fit',color='orangered',linestyle='--')
         ax1.grid(True)
@@ -220,8 +201,8 @@ class MCMC():
                 outfile.write('SUMMARY STATISTICS\n')
                 outfile.write('MIN, MAX, MEAN, MEDIAN, MODE\n')
                 outfile.write('Malthusian parameter\n{0}, {1}, {2}, {3}, \n{4}\n'.format(mmin,mmax,mmean,mmedian,mmode))
-                outfile.write('Ax\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a1min,a1max,a1mean,a1median,a1mode))
-                outfile.write('Ay\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a2min,a2max,a2mean,a2median,a2mode))
+                outfile.write('Main diagonal\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a1min,a1max,a1mean,a1median,a1mode))
+                outfile.write('Super-/Sub-diagonal\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a2min,a2max,a2mean,a2median,a2mode))
 
 
         # PLOT SEDIMENT AND FLOW RESPONSE THRESHOLDS #
@@ -229,7 +210,7 @@ class MCMC():
         
         sed1_mu, sed1_ub, sed1_lb, sed2_mu, sed2_ub, sed2_lb, sed3_mu, sed3_ub, sed3_lb, sed4_mu, sed4_ub, sed4_lb = (np.zeros(self.communities) for i in range(12))
         if ((self.sedsim != False)):
-            for a in range(0,self.communities):
+            for a in range(self.communities):
                 sed1_mu[a] = np.mean(pos_sed1[:,a])
                 sed1_ub[a] = np.percentile(pos_sed1[:,a], 95, axis=0)
                 sed1_lb[a] = np.percentile(pos_sed1[:,a], 5, axis=0)
@@ -246,26 +227,26 @@ class MCMC():
                 sed4_ub[a] = np.percentile(pos_sed4[:,a], 95, axis=0)
                 sed4_lb[a] = np.percentile(pos_sed4[:,a], 5, axis=0)
 
-                sed1_mu_ = sed1_mu[a]
-                sed2_mu_ = sed2_mu[a]
-                sed3_mu_ = sed3_mu[a]
-                sed4_mu_ = sed4_mu[a]
-                sed1_min= sed1_lb[a]
-                sed1_max=sed1_ub[a]
-                sed1_med=np.median(pos_sed1[:,a])
+                sed1_mu_=sed1_mu[a]
+                sed2_mu_=sed2_mu[a]
+                sed3_mu_=sed3_mu[a]
+                sed4_mu_=sed4_mu[a]
+                sed1_min=sed1_lb[a]
                 sed2_min=sed2_lb[a]
-                sed2_max=sed2_ub[a]
-                sed2_med=np.median(pos_sed2[:,a])
                 sed3_min=sed3_lb[a]
-                sed3_max=sed3_ub[a]
-                sed3_med=np.median(pos_sed3[:,a])
                 sed4_min=sed4_lb[a]
+                sed1_max=sed1_ub[a]
+                sed2_max=sed2_ub[a]
+                sed3_max=sed3_ub[a]
                 sed4_max=sed4_ub[a]
+                sed1_med=np.median(pos_sed1[:,a])
+                sed2_med=np.median(pos_sed2[:,a])
+                sed3_med=np.median(pos_sed3[:,a])
                 sed4_med=np.median(pos_sed4[:,a])
-                sed1_mode= stats.mode(pos_sed1[:,a])
-                sed2_mode= stats.mode(pos_sed2[:,a])
-                sed3_mode= stats.mode(pos_sed3[:,a])
-                sed4_mode= stats.mode(pos_sed4[:,a])
+                sed1_mode, count=stats.mode(pos_sed1[:,a])
+                sed2_mode, count=stats.mode(pos_sed2[:,a])
+                sed3_mode, count=stats.mode(pos_sed3[:,a])
+                sed4_mode, count=stats.mode(pos_sed4[:,a])
 
 
                 with file(('%s/summ_stats.txt' % (self.filename)),'a') as outfile:
@@ -279,8 +260,6 @@ class MCMC():
 
                 cy = [0,100,100,0]
                 cmu = [sed1_mu[a], sed2_mu[a], sed3_mu[a], sed4_mu[a]]
-                # c_lb = [sed1_lb[a], sed2_lb[a], sed3_lb[a], sed4_lb[a]]
-                # c_ub = [sed1_ub[a], sed2_ub[a], sed3_ub[a], sed4_ub[a]]
                 c_lb = [sed1_mu[a]-sed1_lb[a], sed2_mu[a]-sed2_lb[a], sed3_mu[a]-sed3_lb[a], sed4_mu[a]-sed4_lb[a]]
                 c_ub = [sed1_ub[a]-sed1_mu[a], sed2_ub[a]-sed2_mu[a], sed3_ub[a]-sed3_mu[a], sed4_ub[a]-sed4_mu[a]]
                 
@@ -291,10 +270,6 @@ class MCMC():
                 ax.plot(cmu, cy, linestyle='-', linewidth=self.width,marker='.', color='sandybrown', label='Mean')
                 ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1, color='darksalmon',mfc='darksalmon',fmt='.',label=None)
                 ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1, color='sienna',mfc='sienna',fmt='.',label=None)
-                # ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', color='sandybrown', label=None)
-                # ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', color='sandybrown', label=None)
-                # if sed3_lb[a] > sed2_ub[a]:
-                #     ax.fill_betweenx(cy,c_lb,c_ub, facecolor='sandybrown', alpha=0.4, label='90% confidence interval')
                 plt.title('Sediment exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=self.font+2, y=1.06)
                 plt.ylabel('Proportion of maximum growth rate [%]',size=self.font+1)
                 plt.xlabel('Sediment input [m/year]',size=self.font+1)
@@ -305,7 +280,7 @@ class MCMC():
 
         flow1_mu, flow1_ub,flow1_lb, flow2_mu, flow2_ub,flow2_lb, flow3_mu, flow3_ub,flow3_lb, flow4_mu, flow4_ub,flow4_lb = (np.zeros(self.communities) for i in range(12))
         if (self.flowsim != False):
-            for a in range(0,self.communities):
+            for a in range(self.communities):
                 flow1_mu[a] = np.mean(pos_flow1[:,a])
                 flow1_ub[a] = np.percentile(pos_flow1[:,a], 95, axis=0)
                 flow1_lb[a] = np.percentile(pos_flow1[:,a], 5, axis=0)
@@ -338,10 +313,10 @@ class MCMC():
                 flow4_min=flow4_lb[a]
                 flow4_max=flow4_ub[a]
                 flow4_med=np.median(pos_flow4[:,a])
-                flow1_mode= stats.mode(pos_flow1[:,a])
-                flow2_mode= stats.mode(pos_flow2[:,a])
-                flow3_mode= stats.mode(pos_flow3[:,a])
-                flow4_mode= stats.mode(pos_flow4[:,a])
+                flow1_mode, count= stats.mode(pos_flow1[:,a])
+                flow2_mode, count= stats.mode(pos_flow2[:,a])
+                flow3_mode, count= stats.mode(pos_flow3[:,a])
+                flow4_mode, count= stats.mode(pos_flow4[:,a])
 
                 with file(('%s/summ_stats.txt' % (self.filename)),'a') as outfile:
                     outfile.write('\n# Water flow threshold: {0}\n'.format(a_labels[a]))
@@ -356,8 +331,6 @@ class MCMC():
                 cmu = [flow1_mu[a], flow2_mu[a], flow3_mu[a], flow4_mu[a]]
                 c_lb = [flow1_mu[a]-flow1_lb[a], flow2_mu[a]-flow2_lb[a], flow3_mu[a]-flow3_lb[a], flow4_mu[a]-flow4_lb[a]]
                 c_ub = [flow1_ub[a]-flow1_mu[a], flow2_ub[a]-flow2_mu[a], flow3_ub[a]-flow3_mu[a], flow4_ub[a]-flow4_mu[a]]
-                # c_ub = [flow1_lb[a], flow2_lb[a], flow3_lb[a], flow4_lb[a]]
-                # c_lb = [flow1_ub[a], flow2_ub[a], flow3_ub[a], flow4_ub[a]]
 
                 
                 fig = plt.figure(figsize=(6,4))
@@ -367,10 +340,6 @@ class MCMC():
                 ax.plot(cmu, cy, linestyle='-', linewidth=self.width, marker='.', color='steelblue', label='Mean')
                 ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1,color='lightsteelblue',mfc='lightsteelblue',fmt='.',label=None)
                 ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1,color='lightslategrey',mfc='lightslategrey',fmt='.',label=None)
-                # ax.plot(c_lb,cy, linestyle='--', linewidth=self.width, marker='.', color='lightsteelblue', label=None)
-                # ax.plot(c_ub,cy, linestyle='--', linewidth=self.width, marker='.', color='lightsteelblue', label=None)
-                # if flow3_lb[a] > flow2_ub[a]:
-                #     ax.fill_betweenx(cy,c_lb,c_ub, facecolor='lightsteelblue',alpha=0.4, label='90% confidence interval')
                 plt.title('Hydrodynamic energy exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=self.font+2, y=1.06)
                 plt.ylabel('Proportion of maximum growth rate [%]', size=self.font+1)
                 plt.xlabel('Fluid flow [m/sec]', size=self.font+1)
@@ -379,7 +348,7 @@ class MCMC():
                 plt.savefig('%s/flow_response_%s.png' % (self.filename, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
                 plt.clf()
 
-    def save_params(self,naccept, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4, pos_m, pos_ax, pos_ay, pos_rmse, pos_samples):    ### SAVE RECORD OF ACCEPTED PARAMETERS ###
+    def save_params(self,naccept, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4, pos_m, pos_ax, pos_ay, pos_diff, pos_samples):    ### SAVE RECORD OF ACCEPTED PARAMETERS ###
         if self.sedsim == True:
             seds = str(np.concatenate((pos_sed1,pos_sed2,pos_sed3,pos_sed4)).reshape((4,self.communities)))
             if not os.path.isfile('%s/accept_sed.txt' % (self.filename)):
@@ -422,15 +391,15 @@ class MCMC():
                 outfile.write('\n# {0}\t'.format(naccept))
                 outfile.write(aij__)
 
-        rmse__ = str(pos_rmse)
-        if not os.path.isfile(('%s/accept_rmse.txt' % (self.filename))):
-            with file(('%s/accept_rmse.txt' % (self.filename)),'w') as outfile:
+        diff_ = str(pos_diff)
+        if not os.path.isfile(('%s/accept_diff.txt' % (self.filename))):
+            with file(('%s/accept_diff.txt' % (self.filename)),'w') as outfile:
                 outfile.write('\n# {0}\t'.format(naccept))
-                outfile.write(rmse__)
+                outfile.write(diff_)
         else:
-            with file(('%s/accept_rmse.txt' % (self.filename)),'a') as outfile:
+            with file(('%s/accept_diff.txt' % (self.filename)),'a') as outfile:
                 outfile.write('\n# {0}\t'.format(naccept))
-                outfile.write(rmse__)
+                outfile.write(diff_)
 
         fx__ = str(pos_samples)
         if not os.path.isfile(('%s/accept_samples.txt' % (self.filename))):
@@ -444,13 +413,21 @@ class MCMC():
 
     def convert_core_format(self, core, communities):
         vec = np.zeros(core.shape[0])
-        for n in range(0,len(vec)):
+        for n in range(len(vec)):
             idx = np.argmax(core[n,:])# get index,
             vec[n] = idx+1 # +1 so that zero is preserved as 'none'
         return vec
 
+    def diff_score(self, z,intervals):
+        same= np.count_nonzero(z)
+        same = float(same)/intervals
+        diff = 1-same
+        print 'diff:', diff
+        return diff*100
+
     def rmse(self, predictions, targets):
-        sed = np.count_nonzero(predictions==0.571)
+        # where there is 1 in the sed column, count
+        sed = np.count_nonzero(predictions[:,self.communities])
         p_sedprop = (float(sed)/predictions.shape[0])
         sedprop = np.absolute((self.d_sedprop - p_sedprop)*0.5)
         rmse =(np.sqrt(((predictions - targets) ** 2).mean()))*0.5
@@ -460,22 +437,21 @@ class MCMC():
     def likelihood_func(self, reef, core_data, input_v):
         pred_core = self.run_Model(reef, input_v)
         pred_core = pred_core.T
-        rmse = self.rmse(pred_core, core_data)
         intervals = pred_core.shape[0]
         z = np.zeros((intervals,self.communities+1))    
-
-        for n in range(0,intervals):
+        for n in range(intervals):
             idx_data = np.argmax(core_data[n,:])
             idx_model = np.argmax(pred_core[n,:])
             if ((pred_core[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
                 z[n,idx_data] = 1
+        diff = self.diff_score(z,intervals)
+        # rmse = self.rmse(pred_core, core_data)
+        
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
         loss = np.log(z)
-        # loss = z*core_data
-        # pred_mask = np.where(pred_core>0, np.log(pred_core), 0)
         # print 'sum of loss:', np.sum(loss)        
-        return [np.sum(loss), pred_core, rmse]
+        return [np.sum(loss), pred_core, diff]
         
     
     def save_core(self,reef,naccept):
@@ -535,7 +511,6 @@ class MCMC():
         pos_m = np.zeros(samples)
         # Create space to store fx of all samples
         pos_samples = np.zeros((samples, self.core_data.shape[0]))
-        rmse= np.zeros(samples) # space for Root Mean Squared Error
         
         #      INITIAL PREDICTION       #
         sed1 = np.zeros(self.communities)
@@ -556,7 +531,7 @@ class MCMC():
         flow4 = np.zeros(self.communities)
 
         if self.flowsim == True:
-            for s in range(0,self.communities):
+            for s in range(self.communities):
                 #     relaxed constraints 
                 flow1[s] = pos_flow1[0,s] = np.random.uniform(0.,0.)
                 flow2[s] = pos_flow2[0,s] = np.random.uniform(0.,0.)
@@ -582,8 +557,8 @@ class MCMC():
         # Declare pyReef-Core and initialize
         reef = Model()
 
-        [likelihood, pred_data, rmse] = self.likelihood_func(reef, self.core_data, v_proposal)
-        pos_rmse = np.full(samples,rmse)
+        [likelihood, pred_data, diff] = self.likelihood_func(reef, self.core_data, v_proposal)
+        pos_diff = np.full(samples,diff)
         data_vec = self.convert_core_format(self.core_data, self.communities)
         data_vec_ = str(data_vec)
         with file(('%s/core_data_vec.txt' % (self.filename)),'w') as outfile:
@@ -592,14 +567,14 @@ class MCMC():
         # write code to save 
         core_vec = self.convert_core_format(pred_data, self.communities)
         pos_samples[0,:] = core_vec
-        print '\tinitial likelihood:', likelihood, 'and rmse:', rmse
+        print '\tinitial likelihood:', likelihood, 'and difference score:', diff
 
         naccept = 0
         count_list = []
         count_list.append(0)
         self.save_core(reef, 'initial')
         self.save_params(naccept, pos_sed1[0,], pos_sed2[0,], pos_sed3[0,], pos_sed4[0,], pos_flow1[0,], pos_flow2[0,], pos_flow3[0,], pos_flow4[0,], 
-            pos_m[0], pos_ax[0], pos_ay[0], pos_rmse[0], pos_samples[0,])
+            pos_m[0], pos_ax[0], pos_ay[0], pos_diff[0], pos_samples[0,])
         
         # print 'Begin sampling using MCMC random walk'
         x_tick_labels = ['No growth','Shallow', 'Mod-deep', 'Deep', 'Sediment']
@@ -638,17 +613,18 @@ class MCMC():
             if self.sedsim == True:
                 tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,self.communities)
                 tmatrix = tmat.T
-                for x in range(0,self.communities):#-3):
-                    for s in range(0,tmatrix.shape[1]):
-                        tmatrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
-                        if tmatrix[x,s] >= self.sedlimits[x,1]:
-                            tmatrix[x,s] = self.sedlimits[x,1]
-                        elif tmatrix[x,s] <= self.sedlimits[x,0]:
-                            tmatrix[x,s] = self.sedlimits[x,0]
+                t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
+                for x in range(self.communities):#-3):
+                    for s in range(tmatrix.shape[1]):
+                        t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
+                        if t2matrix[x,s] >= self.sedlimits[x,1]:
+                            t2matrix[x,s] = tmatrix[x,s]
+                        elif t2matrix[x,s] <= self.sedlimits[x,0]:
+                            t2matrix[x,s] = tmatrix[x,s]
                 # reorder each row , then transpose back as sed1, etc.
                 tmp = np.zeros((self.communities,4))
-                for x in range(0,tmatrix.shape[0]):
-                    a = np.sort(tmatrix[x,:])
+                for x in range(t2matrix.shape[0]):
+                    a = np.sort(t2matrix[x,:])
                     tmp[x,:] = a
                 tmat = tmp.T
                 p_sed1 = tmat[0,:]
@@ -659,17 +635,18 @@ class MCMC():
             if self.flowsim == True:
                 tmat = np.concatenate((flow1,flow2,flow3,flow4)).reshape(4,self.communities)
                 tmatrix = tmat.T
-                for x in range(0,self.communities):#-3):
-                    for s in range(0,tmatrix.shape[1]):
-                        tmatrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
-                        if tmatrix[x,s] >= self.flowlimits[x,1]:
-                            tmatrix[x,s] = self.flowlimits[x,1]
-                        elif tmatrix[x,s] <= self.flowlimits[x,0]:
-                            tmatrix[x,s] = self.flowlimits[x,0]
+                t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
+                for x in range(self.communities):#-3):
+                    for s in range(tmatrix.shape[1]):
+                        t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
+                        if t2matrix[x,s] >= self.flowlimits[x,1]:
+                            t2matrix[x,s] = tmatrix[x,s]
+                        elif t2matrix[x,s] <= self.flowlimits[x,0]:
+                            t2matrix[x,s] = tmatrix[x,s]
                 # reorder each row , then transpose back as flow1, etc.
                 tmp = np.zeros((self.communities,4))
-                for x in range(0,tmatrix.shape[0]):
-                    a = np.sort(tmatrix[x,:])
+                for x in range(t2matrix.shape[0]):
+                    a = np.sort(t2matrix[x,:])
                     tmp[x,:] = a
                 tmat = tmp.T
                 p_flow1 = tmat[0,:]
@@ -701,7 +678,7 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            [likelihood_proposal, pred_data, rmse] = self.likelihood_func(reef, self.core_data, v_proposal)
+            [likelihood_proposal, pred_data, diff] = self.likelihood_func(reef, self.core_data, v_proposal)
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
@@ -729,7 +706,7 @@ class MCMC():
                     flow4 = p_flow4
                 # self.save_core(reef,naccept)
 
-                print  'likelihood:',likelihood, ' and rmse:', rmse, 'accepted'
+                print  'likelihood:',likelihood, ' and difference score:', diff, 'accepted'
 
                 if self.sedsim == True:
                     pos_sed1[i + 1,] = sed1
@@ -746,19 +723,19 @@ class MCMC():
                 pos_m[i + 1] = m
                 pos_v[i + 1,] = v_proposal
                 pos_samples[i + 1,] = self.convert_core_format(pred_data, self.communities)
-                pos_rmse[i + 1,] = rmse
+                pos_diff[i + 1,] = diff
                 
                 ax_append.plot(pos_samples[i + 1,],x_data, label=None)
                 self.save_params(i+1, pos_sed1[i + 1,], pos_sed2[i + 1,], pos_sed3[i + 1,], pos_sed4[i + 1,], 
                     pos_flow1[i + 1,], pos_flow2[i + 1,], pos_flow3[i + 1,], pos_flow4[i + 1,],
-                    pos_m[i + 1], pos_ax[i + 1], pos_ay[i + 1], pos_rmse[i + 1,], pos_samples[i + 1,])
+                    pos_m[i + 1], pos_ax[i + 1], pos_ay[i + 1], pos_diff[i + 1,], pos_samples[i + 1,])
 
            
             else: #reject
                 pos_v[i + 1,] = pos_v[i,]
                 pos_samples[i + 1,] = pos_samples[i,]
-                pos_rmse[i + 1,] = pos_rmse[i,]
-                print 'REJECTED\nLikelihood:',likelihood,'and RMSE rejected:', pos_rmse[i,]
+                pos_diff[i + 1,] = pos_diff[i,]
+                print 'REJECTED\nLikelihood:',likelihood,'and difference score:', pos_diff[i,]
                 #   Copy past accepted state
                 if self.sedsim == True:
                     pos_sed1[i + 1,] = pos_sed1[i,]
@@ -790,20 +767,21 @@ class MCMC():
         final_fig.savefig('%s/proposals.png'% (self.filename), extra_artists = (lgd,),bbox_inches='tight',dpi=300,transparent=False)
         plt.clf()
 
-        ##### PLOT RMSE EVOLUTION ########
+        ##### PLOT DIFFERENCE SCORE EVOLUTION ########
         fig = plt.figure(figsize=(6,4))
         ax= fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
-        x_rmse = np.arange(0,samples,1)
-        plt.plot(x_rmse,pos_rmse,'-',color='orangered',label='RMSE')
-        plt.title("RMSE Evolution", size=self.font+2)
-        plt.ylabel("RMSE", size=self.font+1)
+        x_range = np.arange(0,samples,1)
+        plt.plot(x_range,pos_diff,'-',label='Difference score')
+        plt.title("Difference score evolution", size=self.font+2)
+        plt.ylabel("Difference", size=self.font+1)
         plt.xlabel("Number of samples", size=self.font+1)
-        plt.xlim(0,len(pos_rmse)-1)
-        plt.savefig('%s/rmse_evolution.png' % (self.filename), dpi=300,transparent=False)
+        plt.xlim(0,len(pos_diff)-1)
+        lgd = plt.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
+        plt.savefig('%s/diff_evolution.png' % (self.filename), bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
         plt.clf()
 
-        return (pos_v, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_rmse, accept_ratio, accepted_count, data_vec)
+        return (pos_v, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count, data_vec)
 
 #####################################################################
 #####################################################################
@@ -815,8 +793,8 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples = 10000
-    description = 'lower eta (0.0001)'
+    samples=3000
+    description = ''
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
@@ -827,11 +805,11 @@ def main():
     vis = [False, False] # first for initialisation, second for cores
     sedsim, flowsim = True, True
     run_nb = 0
-    while os.path.exists('mcmcresults_%s' % (run_nb)):
+    while os.path.exists('results_multinomial_%s' % (run_nb)):
         run_nb+=1
-    if not os.path.exists('mcmcresults_%s' % (run_nb)):
-        os.makedirs('mcmcresults_%s' % (run_nb))
-    filename = ('mcmcresults_%s' % (run_nb))
+    if not os.path.exists('results_multinomial_%s' % (run_nb)):
+        os.makedirs('results_multinomial_%s' % (run_nb))
+    filename = ('results_multinomial_%s' % (run_nb))
 
     #    Save File of Run Description   #
     if not os.path.isfile(('%s/description.txt' % (filename))):
@@ -894,7 +872,7 @@ def main():
 
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, timestep,  filename, xmlinput, 
                 sedsim, sedlimits, flowsim,flowlimits, vis)
-    [pos_v, fx_train, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_rmse, accept_ratio, accepted_count, data_vec] = mcmc.sampler()
+    [pos_v, fx_train, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count, data_vec] = mcmc.sampler()
 
     print 'successfully sampled'
     
@@ -911,14 +889,14 @@ def main():
     pos_ax = pos_ax[int(burnin):]
     pos_ay = pos_ay[int(burnin):]
     pos_m = pos_m[int(burnin):]
-    rmse_mu = np.mean(pos_rmse[int(burnin):])
-    rmse_std = np.std(pos_rmse[int(burnin):])
-    rmse_mode = stats.mode(pos_rmse[int(burnin):])
+    diff_mu = np.mean(pos_diff[int(burnin):])
+    diff_std = np.std(pos_diff[int(burnin):])
+    diff_mode, count = stats.mode(pos_diff[int(burnin):])
     
-    print 'mean rmse:',rmse_mu, 'standard deviation:', rmse_std
+    print 'mean diff:',diff_mu, 'standard deviation:', diff_std
 
     with file(('%s/out_results.txt' % (filename)),'w') as outres:
-        outres.write('Mean RMSE: {0}\nStandard deviation: {1}\nMode: {2}\n'.format(rmse_mu, rmse_std,rmse_mode))
+        outres.write('Mean diff: {0}\nStandard deviation: {1}\nMode: {2}\n'.format(diff_mu, diff_std,diff_mode))
         outres.write('Accept ratio: {0} %\nSamples accepted : {1} out of {2}'.format(accept_ratio, accepted_count, samples))
 
     if not os.path.isfile(('%s/out_GLVE.csv' % (filename))):
@@ -959,7 +937,7 @@ def main():
             com_3=[2,5,8,11]
             new_v = np.zeros((pos_v.shape[0],12))
             
-            for i in range(0,4):
+            for i in range(4):
                 new_v[:,i] = pos_v[:,com_1[i]]
             for i in range(4,8):
                 new_v[:,i] = pos_v[:,com_2[i-4]]
@@ -991,14 +969,14 @@ def main():
 
             v_sed = np.zeros((pos_v.shape[0],12))
             v_flow = np.zeros((pos_v.shape[0],12))
-            for i in range(0,4):
+            for i in range(4):
                 v_sed[:,i] = pos_v[:,com_1[i]]
             for i in range(4,8):
                 v_sed[:,i] = pos_v[:,com_2[i-4]]
             for i in range(8,12):
                 v_sed[:,i] = pos_v[:,com_3[i-8]]
 
-            for i in range(0,4):
+            for i in range(4):
                 v_flow[:,i] = pos_v[:,com_1[i+4]]
             for i in range(4,8):
                 v_flow[:,i] = pos_v[:,com_2[i]]
@@ -1045,7 +1023,7 @@ def main():
             com_5=[4,10,16,22]
             com_6=[5,11,17,23]
             new_v = np.zeros((pos_v.shape[0],24))
-            for i in range(0,4):
+            for i in range(4):
                 new_v[:,i] = pos_v[:,com_1[i]]
             for i in range(4,8):
                 new_v[:,i] = pos_v[:,com_2[i-4]]
@@ -1103,7 +1081,7 @@ def main():
             v_sed = np.zeros((pos_v.shape[0],24))
             v_flow = np.zeros((pos_v.shape[0],24))
 
-            for i in range(0,4):
+            for i in range(4):
                 v_sed[:,i] = pos_v[:,com_1[i]]
             for i in range(4,8):
                 v_sed[:,i] = pos_v[:,com_2[i-4]]
@@ -1116,7 +1094,7 @@ def main():
             for i in range(20,24):
                 v_sed[:,i] = pos_v[:,com_6[i-20]]
 
-            for i in range(0,4):
+            for i in range(4):
                 v_flow[:,i] = pos_v[:,com_1[i+4]]
             for i in range(4,8):
                 v_flow[:,i] = pos_v[:,com_2[i]]
