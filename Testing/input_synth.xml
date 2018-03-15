@@ -19,7 +19,7 @@
 	<habitats>
 		<!-- Initial depth relative to sea-level at start time [m].
              Note: positive when below sea-level. -->
-		<depth>25</depth>
+		<depth>25.</depth>
 		<!-- Number of Community to define. -->
 		<speciesNb>3</speciesNb>
 		<!-- Maximum population number. -->
@@ -32,7 +32,7 @@
 			<name>Shallow</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
                  considered population of Community (Malthusian parameter). -->
-			<malthus>0.004</malthus>
+			<malthus>0.086</malthus>
 			<!-- Initial population number for considered Community. -->
 			<population>0.</population>
 			<!-- Community maximum production rate for considered Community [m/y]. -->
@@ -46,7 +46,7 @@
 			<name>Mod-deep</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
 				 considered population of Community (Malthusian parameter). -->
-			<malthus>0.004</malthus>
+			<malthus>0.086</malthus>
 			<!-- Initial population number for considered Community. -->
 			<population>0.</population>
 			<!-- Community maximum production rate for considered Community [m/y]. -->
@@ -60,52 +60,12 @@
 			<name>Deep</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
 				 considered population of Community (Malthusian parameter). -->
-			<malthus>0.004</malthus>
+			<malthus>0.086</malthus>
 			<!-- Initial population number for considered Community. -->
 			<population>0.</population>
 			<!-- Community maximum production rate for considered Community [m/y]. -->
 			<production>0.009</production> <!-- prev, 10. current, 10-->
 		</species>
-		<?ignore
-		<!-- Community definition -->
-		<species>
-			<!-- Community name needs to be lower than 10 characters -->
-			<name>L1-Shal</name>
-			<!-- Definition of intrinsic rate of increase/decrease of the
-				 considered population of Community (Malthusian parameter). -->
-			<malthus>0.004</malthus>
-			<!-- Initial population number for considered Community. -->
-			<population>0.</population>
-			<!-- Community maximum production rate for considered Community [m/y]. -->
-			<production>0.011</production> <!--prev, 11. current, 15.-->
-		</species>
-
-		<!-- Community definition -->
-		<species>
-			<!-- Community name needs to be lower than 10 characters -->
-			<name>L2-Mod</name>
-			<!-- Definition of intrinsic rate of increase/decrease of the
-				 considered population of Community (Malthusian parameter). -->
-			<malthus>0.004</malthus>
-			<!-- Initial population number for considered Community. -->
-			<population>0.</population>
-			<!-- Community maximum production rate for considered Community [m/y]. -->
-			<production>0.015</production> <!-- prev, 15. current, 9.-->
-		</species>
-
-		<!-- Community definition -->
-		<species>
-			<!-- Community name needs to be lower than 10 characters -->
-			<name>L3-Deep</name>
-			<!-- Definition of intrinsic rate of increase/decrease of the
-				 considered population of Community (Malthusian parameter). -->
-			<malthus>0.004</malthus>
-			<!-- Initial population number for considered Community. -->
-			<population>0.</population>
-			<!-- Community maximum production rate for considered Community [m/y]. -->
-			<production>0.010</production> <!-- prev, 9. current, 10.-->
-		</species>
-		?>
         <!-- Community matrix representing the interactions between community.
            αij is the interaction coefficient among the community association i and j ,
            (a particular case is αii, the interaction of one community association with itself).
@@ -119,22 +79,22 @@
                           0.      0.      0.      0.001  -0.001
         -->
     <communityMatrix>
-      <!-- Interaction for community 1 -->
-      <value col="0" row="0">-0.0005</value>
-      <value col="1" row="0">-0.0001</value>
-      <value col="2" row="0">0</value>
+      <!-- Interaction for communities 1 -->
+      <value col="0" row="0">-0.01</value>
+      <value col="1" row="0">-0.03</value>
+      <value col="2" row="0">0.</value>
 
-      <!-- Interaction for community 2 -->
-      <value col="0" row="1">-0.0001</value>
-      <value col="1" row="1">-0.0005</value>
-      <value col="2" row="1">-0.0001</value>
+      <!-- Interaction for communities 2 -->
+      <value col="0" row="1">-0.03</value>
+      <value col="1" row="1">-0.01</value>
+      <value col="2" row="1">-0.03</value>
 
-      <!-- Interaction for community 3 -->
-      <value col="0" row="2">0</value>
-      <value col="1" row="2">-0.0001</value>
-      <value col="2" row="2">-0.0005</value>
+      <!-- Interaction for communities 3 -->
+      <value col="0" row="2">0.0</value>
+      <value col="1" row="2">-0.03</value>
+      <value col="2" row="2">-0.01</value>
     </communityMatrix>
-	</habitats>
+  </habitats>
 
 	<!-- Sea-level structure
 		The following methods can be used:
@@ -258,7 +218,12 @@
 			<!-- A = -3e5, B = 30, intercept at 1.0e-4 -->
 			<!-- Windward curve as 4x less sedimentation than leeward-->
 			<linear>
+				<?ignore
 				<!-- WINDWARD -->
+				<dmax>30.</dmax>
+        		<a>6.67e-05</a>   
+        		<b>0.001</b>
+				?>
 				<dmax>30.</dmax>
 				<a>15000.</a> <!-- Max Sed = 0.008 m/y, intercepts = (0.004,0) (0.008,30)-->
 				<b>-15.</b>
@@ -292,7 +257,7 @@
 				<sdvalue col="1" row="1">5.</sdvalue>
 				<sdvalue col="2" row="1">0.</sdvalue>
 			</expdecay>
-			?>	 
+			?>
 		</function>
 		
 	</sedinput>
@@ -371,6 +336,23 @@
     -->
     
     <flowshape>
+      <!-- Definition of point A, B, C and D for first community -->
+      <fvalue col="0" row="0">0.055</fvalue>
+      <fvalue col="1" row="0">0.082</fvalue>
+      <fvalue col="2" row="0">0.259</fvalue>
+      <fvalue col="3" row="0">0.288</fvalue>
+      <!-- Definition of point A, B, C and D for second community -->
+      <fvalue col="0" row="1">0.008</fvalue>
+      <fvalue col="1" row="1">0.051</fvalue>
+      <fvalue col="2" row="1">0.172</fvalue>
+      <fvalue col="3" row="1">0.185</fvalue>
+      <!-- Definition of point A, B, C and D for third community -->
+      <fvalue col="0" row="2">0.</fvalue>
+      <fvalue col="1" row="2">0.</fvalue>
+      <fvalue col="2" row="2">0.058</fvalue>
+      <fvalue col="3" row="2">0.066</fvalue>
+    </flowshape>
+      <?ignore
       <!-- WINDWARD MARGIN -->
       <!-- Definition of point A, B, C and D for first Community -->
       <fvalue col="0" row="0">0.05</fvalue> <!-- metres/second -->
@@ -387,24 +369,7 @@
       <fvalue col="1" row="2">0.</fvalue> 
       <fvalue col="2" row="2">0.04</fvalue> 
       <fvalue col="3" row="2">0.08</fvalue> 
-      <?ignore
-      <!-- Definition of point A, B, C and D for Community 4 -->
-      <fvalue col="0" row="3">0.</fvalue> 
-      <fvalue col="1" row="3">0.</fvalue> 
-      <fvalue col="2" row="3">0.</fvalue> 
-      <fvalue col="3" row="3">0.</fvalue> 
-      <!-- Definition of point A, B, C and D for Community 5 -->
-      <fvalue col="0" row="4">0.</fvalue> 
-      <fvalue col="1" row="4">0.</fvalue> 
-      <fvalue col="2" row="4">0.</fvalue> 
-      <fvalue col="3" row="4">0.</fvalue> 
-      <!-- Definition of point A, B, C and D for Community 6 -->
-      <fvalue col="0" row="5">0.</fvalue>
-      <fvalue col="1" row="5">0.</fvalue> 
-      <fvalue col="2" row="5">0.</fvalue> 
-      <fvalue col="3" row="5">0.</fvalue> 
       ?>
-    </flowshape>
 
     <!-- Definition of sedimentation shape function influencing each Community [m/d].
                       Min.[A]    Opt.1 [B]    Opt.2 [C]    Max. [D]
@@ -415,6 +380,23 @@
             Community5    0.001       0.005        0.008       0.01
     -->
     <sedshape>
+      <!-- Definition of point A, B, C and D for first community -->
+      <svalue col="0" row="0">0.0009</svalue>
+      <svalue col="1" row="0">0.0015</svalue>
+      <svalue col="2" row="0">0.0016</svalue>
+      <svalue col="3" row="0">0.0017</svalue>
+      <!-- Definition of point A, B, C and D for second community -->
+      <svalue col="0" row="1">0.0015</svalue>
+      <svalue col="1" row="1">0.0017</svalue>
+      <svalue col="2" row="1">0.0028</svalue>
+      <svalue col="3" row="1">0.0031</svalue>
+      <!-- Definition of point A, B, C and D for third community -->
+      <svalue col="0" row="2">0.0023</svalue>
+      <svalue col="1" row="2">0.0024</svalue>
+      <svalue col="2" row="2">0.0027</svalue>
+      <svalue col="3" row="2">0.0043</svalue>
+    </sedshape>
+    <?ignore
       <!-- Definition of point A, B, C and D for Community 1 -->
       <svalue col="0" row="0">0.</svalue> <!-- 0.1 m/s -->
       <svalue col="1" row="0">0.</svalue> <!-- 0.1 m/s -->
@@ -430,24 +412,8 @@
       <svalue col="1" row="2">0.0026</svalue>
       <svalue col="2" row="2">0.004</svalue>
       <svalue col="3" row="2">0.0045</svalue>
-      <?ignore
-      <!-- Definition of point A, B, C and D for Community 4 -->
-      <svalue col="0" row="3">0.</svalue>
-      <svalue col="1" row="3">0.</svalue>
-      <svalue col="2" row="3">0.</svalue>
-      <svalue col="3" row="3">0.</svalue>
-      <!-- Definition of point A, B, C and D for Community 5 -->
-      <svalue col="0" row="4">0.</svalue>
-      <svalue col="1" row="4">0.</svalue>
-      <svalue col="2" row="4">0.</svalue>
-      <svalue col="3" row="4">0.</svalue>
-      <!-- Definition of point A, B, C and D for Community 6 -->
-      <svalue col="0" row="5">0.</svalue>
-      <svalue col="1" row="5">0.</svalue>
-      <svalue col="2" row="5">0.</svalue>
-      <svalue col="3" row="5">0.</svalue>
-      ?>
     </sedshape>
+    ?>
   </envishape>
 
 </pyreefcore>

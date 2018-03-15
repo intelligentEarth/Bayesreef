@@ -8,6 +8,7 @@ import os
 import math
 import time
 import random
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
@@ -22,26 +23,29 @@ c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
-    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput, sedsim, sedlimits, flowsim, flowlimits, vis):
+    def __init__(self, simtime, samples, communities, core_data, core_depths,data_vec, timestep,filename, xmlinput, sedsim, sedlim, flowsim, flowlim, max_a, max_m, vis):
         self.filename = filename
         self.input = xmlinput
         self.communities = communities
         self.samples = samples       
         self.core_data = core_data
         self.core_depths = core_depths
+        self.data_vec = data_vec
         self.timestep = timestep
         self.vis = vis
         self.sedsim = sedsim
         self.flowsim = flowsim
-        self.sedlimits = sedlimits
-        self.flowlimits = flowlimits
+        self.sedlim = sedlim
+        self.flowlim = flowlim
+        self.max_a = max_a
+        self.max_m = max_m
         self.simtime = simtime
         self.font = 10
         self.width = 1
         self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
         self.initial_sed = []
         self.initial_flow = []
-        self.step_m = 0.002 
+        self.step_m = 0.05 
         self.step_a = 0.002  
         self.step_sed = 0.0001 
         self.step_flow = 0.0015
@@ -61,7 +65,8 @@ class MCMC():
             reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=300)
         output_core = reef.plot.core_timetodepth(self.communities, self.core_depths) #modelPlot.py
         # predicted_core = reef.convert_core(self.communities, output_core, self.core_depths) #model.py
-        # return predicted_core 
+        # return predicted_core
+        print 'output_core_shape', output_core.shape 
         return output_core
 
     def plot_results(self, pos_m, pos_ax, pos_ay, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4, burn):
@@ -75,7 +80,7 @@ class MCMC():
         pdf_m = stats.norm.pdf(mspace,mm,ms)
         mmean=np.mean(pos_m)
         mmedian=np.median(pos_m)
-        mmode, count= stats.mode(pos_m)
+        mmode,count=stats.mode(pos_m)
     
         fig = plt.figure(figsize=(6,8))
         ax = fig.add_subplot(111)
@@ -91,7 +96,7 @@ class MCMC():
         # ax1.axvline(mm,linestyle='-', color='black', linewidth=1,label='Mean')
         # ax1.axvline(mm+ms,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
         # ax1.axvline(mm-ms,linestyle='--', color='black', linewidth=1,label=None)
-        ax1.axvline(mmode,linestyle='-', color='orangered', linewidth=1,label=None)
+        #ax1.axvline(mmode,linestyle='-', color='orangered', linewidth=1,label=None)
 
         # ax1.plot(mspace,pdf_m,label='Best fit',color='orangered',linestyle='--')
         ax1.grid(True)
@@ -122,12 +127,12 @@ class MCMC():
         a1max=a1max
         a1mean=np.mean(pos_ax)
         a1median=np.median(pos_ax)
-        a1mode, count=stats.mode(pos_ax)
+        a1mode,count=stats.mode(pos_ax)
         a2min=a2min
         a2max=a2max
         a2mean=np.mean(pos_ay)
         a2median=np.median(pos_ay)
-        a2mode, count=stats.mode(pos_ay)
+        a2mode,count=stats.mode(pos_ay)
 
         ####   main diagonal   
         fig = plt.figure(figsize=(6,8))
@@ -145,7 +150,7 @@ class MCMC():
         # ax1.axvline(a1m,linestyle='-', color='black', linewidth=1,label='Mean')
         # ax1.axvline(a1m+a1s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
         # ax1.axvline(a1m-a1s,linestyle='--', color='black', linewidth=1,label=None)
-        ax1.axvline(a1mode,linestyle='-', color='orangered', linewidth=1,label=None)
+        #ax1.axvline(a1mode,linestyle='-', color='orangered', linewidth=1,label=None)
         ax1.grid(True)
         ax1.set_ylabel('Frequency',size=self.font+1)
         ax1.set_title(r'Main diagonal value ($\alpha_{ii}$)',size=self.font+2)
@@ -177,7 +182,7 @@ class MCMC():
         # ax1.axvline(a2m,linestyle='-', color='black', linewidth=1,label='Mean')
         # ax1.axvline(a2m+a2s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
         # ax1.axvline(a2m-a2s,linestyle='--', color='black', linewidth=1,label=None)
-        ax1.axvline(a2mode,linestyle='-', color='orangered', linewidth=1,label=None)
+        #ax1.axvline(a2mode,linestyle='-', color='orangered', linewidth=1,label=None)
 
         # ax1.plot(a2space,pdf_a2,label='Best fit',color='orangered',linestyle='--')
         ax1.grid(True)
@@ -243,10 +248,10 @@ class MCMC():
                 sed2_med=np.median(pos_sed2[:,a])
                 sed3_med=np.median(pos_sed3[:,a])
                 sed4_med=np.median(pos_sed4[:,a])
-                sed1_mode, count=stats.mode(pos_sed1[:,a])
-                sed2_mode, count=stats.mode(pos_sed2[:,a])
-                sed3_mode, count=stats.mode(pos_sed3[:,a])
-                sed4_mode, count=stats.mode(pos_sed4[:,a])
+                sed1_mode,count=stats.mode(pos_sed1[:,a])
+                sed2_mode,count=stats.mode(pos_sed2[:,a])
+                sed3_mode,count=stats.mode(pos_sed3[:,a])
+                sed4_mode,count=stats.mode(pos_sed4[:,a])
 
 
                 with file(('%s/summ_stats.txt' % (self.filename)),'a') as outfile:
@@ -313,10 +318,10 @@ class MCMC():
                 flow4_min=flow4_lb[a]
                 flow4_max=flow4_ub[a]
                 flow4_med=np.median(pos_flow4[:,a])
-                flow1_mode, count= stats.mode(pos_flow1[:,a])
-                flow2_mode, count= stats.mode(pos_flow2[:,a])
-                flow3_mode, count= stats.mode(pos_flow3[:,a])
-                flow4_mode, count= stats.mode(pos_flow4[:,a])
+                flow1_mode,count= stats.mode(pos_flow1[:,a])
+                flow2_mode,count= stats.mode(pos_flow2[:,a])
+                flow3_mode,count= stats.mode(pos_flow3[:,a])
+                flow4_mode,count= stats.mode(pos_flow4[:,a])
 
                 with file(('%s/summ_stats.txt' % (self.filename)),'a') as outfile:
                     outfile.write('\n# Water flow threshold: {0}\n'.format(a_labels[a]))
@@ -348,68 +353,84 @@ class MCMC():
                 plt.savefig('%s/flow_response_%s.png' % (self.filename, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
                 plt.clf()
 
-    def save_params(self,naccept, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4, pos_m, pos_ax, pos_ay, pos_diff, pos_samples):    ### SAVE RECORD OF ACCEPTED PARAMETERS ###
+    def save_params(self,naccept, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4, pos_m, pos_ax, pos_ay, pos_diff, pos_samples, proposal):    ### SAVE RECORD OF ACCEPTED PARAMETERS ###
         if self.sedsim == True:
-            seds = str(np.concatenate((pos_sed1,pos_sed2,pos_sed3,pos_sed4)).reshape((4,self.communities)))
-            if not os.path.isfile('%s/accept_sed.txt' % (self.filename)):
-                with file(('%s/accept_sed.txt' % (self.filename)),'w') as outfile:
-                    outfile.write('\n# {0}\n'.format(naccept))
-                    outfile.write(seds)
+            if not os.path.isfile(('%s/accept_sed.csv' % (self.filename))):
+                with file(('%s/accept_sed.csv' % (self.filename)),'wb') as outfile:
+                    writer = csv.writer(outfile, delimiter=',')
+                    data = [naccept,np.ndarray.tolist(pos_sed1),np.ndarray.tolist(pos_sed2),np.ndarray.tolist(pos_sed3),np.ndarray.tolist(pos_sed4)]
+                    writer.writerow(data)
             else:
-                with file(('%s/accept_sed.txt' % (self.filename)),'a') as outfile:
-                    outfile.write('\n# {0}\n'.format(naccept))
-                    outfile.write(seds)
+                with file(('%s/accept_sed.csv' % (self.filename)),'ab') as outfile:
+                    writer = csv.writer(outfile, delimiter=',')
+                    data = [naccept,np.ndarray.tolist(pos_sed1),np.ndarray.tolist(pos_sed2),np.ndarray.tolist(pos_sed3),np.ndarray.tolist(pos_sed4)]
+                    writer.writerow(data)
         
         if self.flowsim == True:
-            flows = str(np.concatenate((pos_flow1,pos_flow2,pos_flow3,pos_flow4)).reshape((4,self.communities)))
-            if not os.path.isfile('%s/accept_flow.txt' % (self.filename)):
-                with file(('%s/accept_flow.txt' % (self.filename)),'w') as outfile:
-                    outfile.write('\n# {0}\n'.format(naccept))
-                    outfile.write(flows)
+            if not os.path.isfile(('%s/accept_flow.csv' % (self.filename))):
+                with file(('%s/accept_flow.csv' % (self.filename)),'wb') as outfile:
+                    writer = csv.writer(outfile, delimiter=',')
+                    data = [naccept,np.ndarray.tolist(pos_flow1),np.ndarray.tolist(pos_flow2),np.ndarray.tolist(pos_flow3),np.ndarray.tolist(pos_flow4)]
+                    writer.writerow(data)
             else:
-                with file(('%s/accept_flow.txt' % (self.filename)),'a') as outfile:
-                    outfile.write('\n# {0}\n'.format(naccept))
-                    outfile.write(flows)
-        
-        m__ = str(pos_m)
-        if not os.path.isfile(('%s/accept_m.txt' % (self.filename))):
-            with file(('%s/accept_m.txt' % (self.filename)),'w') as outfile:
-                outfile.write('\n# {0}\t'.format(naccept))    
-                outfile.write(m__)
-        else:
-            with file(('%s/accept_m.txt' % (self.filename)),'a') as outfile:
-                outfile.write('\n# {0}\t'.format(naccept))
-                outfile.write(m__)
+                with file(('%s/accept_flow.csv' % (self.filename)),'ab') as outfile:
+                    writer = csv.writer(outfile, delimiter=',')
+                    data = [naccept,np.ndarray.tolist(pos_flow1),np.ndarray.tolist(pos_flow2),np.ndarray.tolist(pos_flow3),np.ndarray.tolist(pos_flow4)]
+                    writer.writerow(data)
 
-        aij__ = str((pos_ax,pos_ay))
-        if not os.path.isfile(('%s/accept_aij.txt' % (self.filename))):
-            with file(('%s/accept_aij.txt' % (self.filename)),'w') as outfile:
-                outfile.write('\n# {0}\t'.format(naccept))
-                outfile.write(aij__)
+        if not os.path.isfile(('%s/accept_m.csv' % (self.filename))):
+            with file(('%s/accept_m.csv' % (self.filename)),'wb') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,pos_m]
+                writer.writerow(data)
         else:
-            with file(('%s/accept_aij.txt' % (self.filename)),'a') as outfile:
-                outfile.write('\n# {0}\t'.format(naccept))
-                outfile.write(aij__)
+            with file(('%s/accept_m.csv' % (self.filename)),'ab') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,pos_m]
+                writer.writerow(data)
 
-        diff_ = str(pos_diff)
-        if not os.path.isfile(('%s/accept_diff.txt' % (self.filename))):
-            with file(('%s/accept_diff.txt' % (self.filename)),'w') as outfile:
-                outfile.write('\n# {0}\t'.format(naccept))
-                outfile.write(diff_)
+        if not os.path.isfile(('%s/accept_aij.csv' % (self.filename))):
+            with file(('%s/accept_aij.csv' % (self.filename)),'wb') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,pos_ax,pos_ay]
+                writer.writerow(data)
         else:
-            with file(('%s/accept_diff.txt' % (self.filename)),'a') as outfile:
-                outfile.write('\n# {0}\t'.format(naccept))
-                outfile.write(diff_)
+            with file(('%s/accept_aij.csv' % (self.filename)),'ab') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,pos_ax,pos_ay]
+                writer.writerow(data)
 
-        fx__ = str(pos_samples)
-        if not os.path.isfile(('%s/accept_samples.txt' % (self.filename))):
-            with file(('%s/accept_samples.txt' % (self.filename)),'w') as outfile:
-                outfile.write('\n# {0}\n'.format(naccept))
-                outfile.write(fx__)
+        if not os.path.isfile(('%s/accept_diff.csv' % (self.filename))):
+            with file(('%s/accept_diff.csv' % (self.filename)),'wb') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,pos_diff]
+                writer.writerow(data)
         else:
-            with file(('%s/accept_samples.txt' % (self.filename)),'a') as outfile:
-                outfile.write('\n# {0}\n'.format(naccept))
-                outfile.write(fx__)    
+            with file(('%s/accept_diff.csv' % (self.filename)),'ab') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,pos_diff]
+                writer.writerow(data)
+
+        # Save accepted samples
+        if not os.path.isfile(('%s/accept_samples.csv' % (self.filename))):
+            with file(('%s/accept_samples.csv' % (self.filename)),'wb') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,np.ndarray.tolist(pos_samples)]
+                writer.writerow(data)
+        else:
+            with file(('%s/accept_samples.csv' % (self.filename)),'ab') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                data = [naccept,np.ndarray.tolist(pos_samples)]
+                writer.writerow(data)
+        # Save accepted proposals
+        if not os.path.isfile('%s/accepted_proposals.txt' % (self.filename)):
+            with file(('%s/accepted_proposals.txt' % (self.filename)), 'wb') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                writer.writerow(proposal)
+        else:
+            with file(('%s/accepted_proposals.txt' % (self.filename)), 'ab') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                writer.writerow(proposal)
 
     def convert_core_format(self, core, communities):
         vec = np.zeros(core.shape[0])
@@ -425,12 +446,12 @@ class MCMC():
         print 'diff:', diff
         return diff*100
 
-    def rmse(self, predictions, targets):
+    def rmse(self, sim, obs):
         # where there is 1 in the sed column, count
-        sed = np.count_nonzero(predictions[:,self.communities])
-        p_sedprop = (float(sed)/predictions.shape[0])
+        sed = np.count_nonzero(sim[:,self.communities])
+        p_sedprop = (float(sed)/sim.shape[0])
         sedprop = np.absolute((self.d_sedprop - p_sedprop)*0.5)
-        rmse =(np.sqrt(((predictions - targets) ** 2).mean()))*0.5
+        rmse =(np.sqrt(((sim - obs) ** 2).mean()))*0.5
         
         return rmse + sedprop
 
@@ -452,8 +473,7 @@ class MCMC():
         loss = np.log(z)
         # print 'sum of loss:', np.sum(loss)        
         return [np.sum(loss), pred_core, diff]
-        
-    
+           
     def save_core(self,reef,naccept):
         path = '%s/%s' % (self.filename, naccept)
         if not os.path.exists(path):
@@ -475,16 +495,24 @@ class MCMC():
         #      Draw core      #
         reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=300, 
                            figname=('%s/e_core_%s' % (path, naccept)), filename=('%s/core_%s.csv' % (path, naccept)), sep='\t')
-        
-        # pdflist = [f for f in os.listdir(os.curdir) if fnmatch.fnmatch(f, ('*_%s*.pdf' % (naccept)))]
-        # print pdflist
-        # merger = PdfFileMerger()
-        # for pdf in pdflist:
-        #     merger.append(PdfFileReader(file(pdf, 'rb')))
-        # merger.write('output_%s.pdf' % (naccept))       
-        
         return
 
+    def proposal_jump(self, current, low_limit, high_limit, jump_width):
+        proposal = current + np.random.normal(0, jump_width)
+        if proposal >= high_limit:
+            proposal = current
+        elif proposal <= low_limit:
+            proposal = current
+
+        # while lim_condition:
+        #     if proposal >= high_limit:
+        #         proposal = current + np.random.normal(0, jump_width)
+        #     elif proposal <= low_limit:
+        #         proposal = current + np.random.normal(0, jump_width)
+        #     else:
+        #         lim_condition = False
+        return proposal
+    
     def sampler(self):
         data_size = self.core_data.shape[0]
         samples = self.samples
@@ -538,11 +566,9 @@ class MCMC():
                 flow3[s] = pos_flow3[0,s] = np.random.uniform(0.3,0.3)
                 flow4[s] = pos_flow4[0,s] = np.random.uniform(0.3,0.3)
         
-        max_a = -0.1
-        max_m = 0.1
-        cm_ax = pos_ax[0] = np.random.uniform(max_a,0.)
-        cm_ay = pos_ay[0] = np.random.uniform(max_a,0.)
-        m = pos_m[0] = np.random.uniform(0.,max_m)
+        cm_ax = pos_ax[0] = np.random.uniform(self.max_a,0.)
+        cm_ay = pos_ay[0] = np.random.uniform(self.max_a,0.)
+        m = pos_m[0] = np.random.uniform(0., self.max_m)
 
         if (self.sedsim == True) and (self.flowsim == False):
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4))
@@ -564,7 +590,6 @@ class MCMC():
         with file(('%s/core_data_vec.txt' % (self.filename)),'w') as outfile:
             outfile.write(data_vec_)
             # outfile.write('\n\tstep_m: {0}'.format(self.step_m))
-        # write code to save 
         core_vec = self.convert_core_format(pred_data, self.communities)
         pos_samples[0,:] = core_vec
         print '\tinitial likelihood:', likelihood, 'and difference score:', diff
@@ -574,7 +599,7 @@ class MCMC():
         count_list.append(0)
         self.save_core(reef, 'initial')
         self.save_params(naccept, pos_sed1[0,], pos_sed2[0,], pos_sed3[0,], pos_sed4[0,], pos_flow1[0,], pos_flow2[0,], pos_flow3[0,], pos_flow4[0,], 
-            pos_m[0], pos_ax[0], pos_ay[0], pos_diff[0], pos_samples[0,])
+            pos_m[0], pos_ax[0], pos_ay[0], pos_diff[0], pos_samples[0,],pos_v[0,])
         
         # print 'Begin sampling using MCMC random walk'
         x_tick_labels = ['No growth','Shallow', 'Mod-deep', 'Deep', 'Sediment']
@@ -614,13 +639,14 @@ class MCMC():
                 tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,self.communities)
                 tmatrix = tmat.T
                 t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
-                for x in range(self.communities):#-3):
+                for x in range(self.communities):
                     for s in range(tmatrix.shape[1]):
-                        t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
-                        if t2matrix[x,s] >= self.sedlimits[x,1]:
-                            t2matrix[x,s] = tmatrix[x,s]
-                        elif t2matrix[x,s] <= self.sedlimits[x,0]:
-                            t2matrix[x,s] = tmatrix[x,s]
+                        t2matrix[x,s] = self.proposal_jump(tmatrix[x,s], self.sedlim[0], self.sedlim[1], self.step_sed)
+                        # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
+                        # if t2matrix[x,s] >= self.sedlimits[x,1]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
+                        # elif t2matrix[x,s] <= self.sedlimits[x,0]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
                 # reorder each row , then transpose back as sed1, etc.
                 tmp = np.zeros((self.communities,4))
                 for x in range(t2matrix.shape[0]):
@@ -638,11 +664,12 @@ class MCMC():
                 t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
                 for x in range(self.communities):#-3):
                     for s in range(tmatrix.shape[1]):
-                        t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
-                        if t2matrix[x,s] >= self.flowlimits[x,1]:
-                            t2matrix[x,s] = tmatrix[x,s]
-                        elif t2matrix[x,s] <= self.flowlimits[x,0]:
-                            t2matrix[x,s] = tmatrix[x,s]
+                        t2matrix[x,s] = self.proposal_jump(tmatrix[x,s], self.flowlim[0], self.flowlim[1], self.step_flow)
+                        # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
+                        # if t2matrix[x,s] >= self.flowlimits[x,1]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
+                        # elif t2matrix[x,s] <= self.flowlimits[x,0]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
                 # reorder each row , then transpose back as flow1, etc.
                 tmp = np.zeros((self.communities,4))
                 for x in range(t2matrix.shape[0]):
@@ -654,21 +681,10 @@ class MCMC():
                 p_flow3 = tmat[2,:]
                 p_flow4 = tmat[3,:]
 
-            p_ax = cm_ax + np.random.normal(0,self.step_a,1)
-            if p_ax > 0:
-                p_ax = cm_ax
-            elif p_ax < max_a:
-                p_ax = cm_ax
-            p_ay = cm_ay + np.random.normal(0,self.step_a,1)
-            if p_ay > 0:
-                p_ay = cm_ay
-            elif p_ay < max_a:
-                p_ay = cm_ay   
-            p_m = m + np.random.normal(0,self.step_m,1)
-            if p_m < 0:
-                p_m = m
-            elif p_m > max_m:
-                p_m = m
+            p_ax = self.proposal_jump(cm_ax, self.max_a, 0, self.step_a)
+            p_ay = self.proposal_jump(cm_ay, self.max_a, 0, self.step_a)
+            p_m = self.proposal_jump(m, 0, self.max_m, self.step_m)
+            
             v_proposal = []
             if (self.sedsim == True) and (self.flowsim == False):
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4))
@@ -728,8 +744,7 @@ class MCMC():
                 ax_append.plot(pos_samples[i + 1,],x_data, label=None)
                 self.save_params(i+1, pos_sed1[i + 1,], pos_sed2[i + 1,], pos_sed3[i + 1,], pos_sed4[i + 1,], 
                     pos_flow1[i + 1,], pos_flow2[i + 1,], pos_flow3[i + 1,], pos_flow4[i + 1,],
-                    pos_m[i + 1], pos_ax[i + 1], pos_ay[i + 1], pos_diff[i + 1,], pos_samples[i + 1,])
-
+                    pos_m[i + 1], pos_ax[i + 1], pos_ay[i + 1], pos_diff[i + 1,], pos_samples[i + 1,], pos_v[i + 1,])
            
             else: #reject
                 pos_v[i + 1,] = pos_v[i,]
@@ -784,26 +799,27 @@ class MCMC():
         return (pos_v, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count, data_vec)
 
 #####################################################################
-#####################################################################
-#####################################################################
-#####################################################################
-#####################################################################
 
 def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples=3000
+    samples=5000
     description = ''
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
     xmlinput = 'input_synth.xml'
-    datafile = 'data/synth_core.txt'
-    core_depths = np.genfromtxt(datafile, usecols=(0), unpack = True) 
-    core_data = np.loadtxt('data/synth_core_bi.txt')
+    datafile = 'data/synth_core_vec.txt'
+    core_depths, data_vec = np.genfromtxt(datafile, usecols=(0, 1), unpack = True) 
+    print 'data vec', data_vec
+    core_data = np.loadtxt('data/synth_core_prop.txt', usecols=(1,2,3,4))
     vis = [False, False] # first for initialisation, second for cores
     sedsim, flowsim = True, True
+    sedlim = [0., 0.005]
+    flowlim = [0.,0.3]
+    max_a = -0.2
+    max_m = 0.3
     run_nb = 0
     while os.path.exists('results_multinomial_%s' % (run_nb)):
         run_nb+=1
@@ -824,38 +840,9 @@ def main():
             outfile.write('\n\tNo. samples: {0}'.format(samples))
             outfile.write('\n\tXML input: {0}'.format(xmlinput))
             outfile.write('\n\tData file: {0}'.format(datafile))
-    """"Windward sedlim = 0.005, flowlim = 0.3
-            sedlim_1 = [[0., 0.0035]]
-            sedlim_2 = [[0.001,0.0035]]
-            sedlim_3 = [[0.001,0.005]]
-            sedlim_4 = sedlim_5 = sedlim_6 = [[0.,0.]] 
-            # sedlim_4 = [[0.001,0.0035]]
-            # sedlim_5 = [[0.002,0.004]]
-            # sedlim_6 = [[0.002,0.005]]
-            flowlim_1 = [[0.02,0.3]]
-            flowlim_2 = [[0.005.,0.2]]
-            flowlim_3 = [[0.,0.15]]
-            flowlim_4 = [[0.005,0.2]]
-            flowlim_5 = [[0.002,0.1]]
-            flowlim_6 = [[0.,0.1]]
-        Leeward sedlim = 0.005, flowlim = 0.2
-            # sedlim_1 = [[0.0005,0.0035]]
-            # sedlim_2 = [[0,1e-3]]
-            # sedlim_3 = [[0,2e-4]]
-            sedlim_1 = sedlim_2 = sedlim_3 = [[0.,0.]] 
-            sedlim_4 = [[0.0005,0.0035]]
-            sedlim_5 = [[0.0005, 0.003]]
-            sedlim_6 = [[0. 0.005]]
-            flowlim_1 = [[0.05,0.3]]
-            flowlim_2 = [[0.05,0.3]]
-            flowlim_3 = [[0,0.2]]
-            flowlim_4 = [[0.01,0.3]]
-            flowlim_5 = [[0,0.2]]
-            flowlim_6 = [[0,0.1]]
-    """
     ##### max/min values for each assemblage #####
-    sedlim_1 = [[0., 0.0035]]
-    sedlim_2 = [[0.001,0.0035]]
+    sedlim_1 = [[0., 0.005]]
+    sedlim_2 = [[0.001,0.005]]
     sedlim_3 = [[0.001,0.005]]
 
     flowlim_1 = [[0.01,0.3]]
@@ -870,13 +857,18 @@ def main():
     if flowsim == True:
         flowlimits = np.concatenate((flowlim_1,flowlim_2,flowlim_3))#flowlim_4,flowlim_5,flowlim_6))
 
-    mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, timestep,  filename, xmlinput, 
-                sedsim, sedlimits, flowsim,flowlimits, vis)
+
+    print 'core data ', core_data.shape
+    print 'core_depths', core_depths.shape
+    print 'data_vec', data_vec.shape
+
+    mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, data_vec, timestep,  filename, xmlinput, 
+                sedsim, sedlim, flowsim,flowlim, max_a, max_m, vis)
     [pos_v, fx_train, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count, data_vec] = mcmc.sampler()
 
     print 'successfully sampled'
     
-    burnin = 0.05 * samples  # use post burn in samples
+    burnin = 0.1 * samples  # use post burn in samples
     pos_v = pos_v[int(burnin):, ]
     pos_sed1 = pos_sed1[int(burnin):, ]
     pos_sed2 = pos_sed2[int(burnin):, ]
@@ -902,8 +894,14 @@ def main():
     if not os.path.isfile(('%s/out_GLVE.csv' % (filename))):
         np.savetxt("%s/out_GLVE.csv" % (filename), np.c_[pos_m,pos_ax,pos_ay], delimiter=',')
 
-    if not os.path.isfile(('%s/out_pos.csv' % (filename))):
-        np.savetxt("%s/out_pos.csv" % (filename), pos_v, delimiter=',')
+    if not os.path.isfile(('%s/out_sed.csv' % (filename))):
+        np.savetxt("%s/out_sed.csv" % (filename), np.c_[pos_sed1,pos_sed2,pos_sed3, pos_sed4], delimiter=',')
+
+    if not os.path.isfile(('%s/out_flow.csv' % (filename))):
+        np.savetxt("%s/out_flow.csv" % (filename), np.c_[pos_flow1,pos_flow2,pos_flow3, pos_flow4], delimiter=',')
+
+    if not os.path.isfile(('%s/pos_proposal.csv' % (filename))):
+        np.savetxt("%s/pos_proposal.csv" % (filename), pos_v, delimiter=',')
 
     fx_mu = fx_train.mean(axis=0)
     fx_high = np.percentile(fx_train, 95, axis=0)
@@ -1136,5 +1134,6 @@ def main():
             # # plt.savefig('%s/v_pos_boxplot.svg'% (filename), format='svg', dpi=300)
             plt.clf()
     mcmc.plot_results(pos_m, pos_ax, pos_ay, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4,burnin)
+
     print 'Finished simulations'
 if __name__ == "__main__": main()
