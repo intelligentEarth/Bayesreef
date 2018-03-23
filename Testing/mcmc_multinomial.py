@@ -45,10 +45,18 @@ class MCMC():
         self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
         self.initial_sed = []
         self.initial_flow = []
-        self.step_m = 0.05 
-        self.step_a = 0.002  
-        self.step_sed = 0.0001 
-        self.step_flow = 0.0015
+        # Stepsize = 1% of prior
+        self.step_m =0.01#0.002# <1%
+        self.step_a =0.01#0.002# <1%
+        # Stepsize = 2% of prior
+        self.step_sed =0.0001#0.0001# 2%
+        self.step_flow =0.006#0.0015# 0.05%
+
+
+        self.true_m = 0.086
+        self.true_ax = -0.01
+        self.true_ay = -0.03
+
 
     def run_Model(self, reef, input_vector):
         reef.convert_vector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
@@ -93,6 +101,7 @@ class MCMC():
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_m, bins=25, alpha=0.5, facecolor='sandybrown', normed=True)
+        ax1.axvline(self.true_m, linestyle='-', color='black', linewidth=1,label='True value')
         # ax1.axvline(mm,linestyle='-', color='black', linewidth=1,label='Mean')
         # ax1.axvline(mm+ms,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
         # ax1.axvline(mm-ms,linestyle='--', color='black', linewidth=1,label=None)
@@ -146,6 +155,7 @@ class MCMC():
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_ax, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
+        ax1.axvline(self.true_ax, linestyle='-', color='black', linewidth=1,label='True value')
         # ax1.plot(a1space,pdf_a1,label='Best fit',color='orangered',linestyle='--')
         # ax1.axvline(a1m,linestyle='-', color='black', linewidth=1,label='Mean')
         # ax1.axvline(a1m+a1s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
@@ -179,6 +189,7 @@ class MCMC():
         ax1 = fig.add_subplot(211)
         ax1.set_facecolor('#f2f2f3')
         ax1.hist(pos_ay, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
+        ax1.axvline(self.true_ay, linestyle='-', color='black', linewidth=1,label='True value')
         # ax1.axvline(a2m,linestyle='-', color='black', linewidth=1,label='Mean')
         # ax1.axvline(a2m+a2s,linestyle='--', color='black', linewidth=1,label='5th and 95th %ile')
         # ax1.axvline(a2m-a2s,linestyle='--', color='black', linewidth=1,label=None)
@@ -423,12 +434,12 @@ class MCMC():
                 data = [naccept,np.ndarray.tolist(pos_samples)]
                 writer.writerow(data)
         # Save accepted proposals
-        if not os.path.isfile('%s/accepted_proposals.txt' % (self.filename)):
-            with file(('%s/accepted_proposals.txt' % (self.filename)), 'wb') as outfile:
+        if not os.path.isfile('%s/accepted_proposals.csv' % (self.filename)):
+            with file(('%s/accepted_proposals.csv' % (self.filename)), 'wb') as outfile:
                 writer = csv.writer(outfile, delimiter=',')
                 writer.writerow(proposal)
         else:
-            with file(('%s/accepted_proposals.txt' % (self.filename)), 'ab') as outfile:
+            with file(('%s/accepted_proposals.csv' % (self.filename)), 'ab') as outfile:
                 writer = csv.writer(outfile, delimiter=',')
                 writer.writerow(proposal)
 
@@ -513,6 +524,7 @@ class MCMC():
         #         lim_condition = False
         return proposal
     
+
     def sampler(self):
         data_size = self.core_data.shape[0]
         samples = self.samples
@@ -804,22 +816,22 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples=5000
-    description = ''
+    samples= input('Enter number of samples: ')
+    # description = raw_input('Enter description: ')
+    description = '0.01 stepsize'
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
     xmlinput = 'input_synth.xml'
     datafile = 'data/synth_core_vec.txt'
     core_depths, data_vec = np.genfromtxt(datafile, usecols=(0, 1), unpack = True) 
-    print 'data vec', data_vec
     core_data = np.loadtxt('data/synth_core_prop.txt', usecols=(1,2,3,4))
     vis = [False, False] # first for initialisation, second for cores
     sedsim, flowsim = True, True
     sedlim = [0., 0.005]
     flowlim = [0.,0.3]
-    max_a = -0.2
-    max_m = 0.3
+    max_a = -0.15 #-0.2
+    max_m = 0.15 #0.3
     run_nb = 0
     while os.path.exists('results_multinomial_%s' % (run_nb)):
         run_nb+=1
@@ -858,15 +870,11 @@ def main():
         flowlimits = np.concatenate((flowlim_1,flowlim_2,flowlim_3))#flowlim_4,flowlim_5,flowlim_6))
 
 
-    print 'core data ', core_data.shape
-    print 'core_depths', core_depths.shape
-    print 'data_vec', data_vec.shape
-
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, data_vec, timestep,  filename, xmlinput, 
                 sedsim, sedlim, flowsim,flowlim, max_a, max_m, vis)
     [pos_v, fx_train, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count, data_vec] = mcmc.sampler()
 
-    print 'successfully sampled'
+    print 'Successfully sampled'
     
     burnin = 0.1 * samples  # use post burn in samples
     pos_v = pos_v[int(burnin):, ]

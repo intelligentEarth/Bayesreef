@@ -13,19 +13,16 @@ import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 from pyReefCore.model import Model
 import fnmatch
-import shutil
 import matplotlib as mpl
 from cycler import cycler
 from scipy import stats 
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
 
 cmap=plt.cm.Set2
 c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
-    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput, sedsim, sedlimits, flowsim, flowlimits, vis):
+    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput, sedsim, sedlim, flowsim, flowlim, max_a, max_m, vis):
         self.filename = filename
         self.input = xmlinput
         self.communities = communities
@@ -36,12 +33,14 @@ class MCMC():
         self.vis = vis
         self.sedsim = sedsim
         self.flowsim = flowsim
-        self.sedlimits = sedlimits
-        self.flowlimits = flowlimits
+        self.sedlim = sedlim
+        self.flowlim = flowlim
+        self.max_a = max_a
+        self.max_m = max_m
         self.simtime = simtime
         self.font = 10
         self.width = 1
-        self.d_sedprop = float(np.count_nonzero(core_data == 0.571))/core_data.shape[0]
+        self.d_sedprop = float(np.count_nonzero(core_data == (self.communities+1)))/core_data.shape[0]
         self.initial_sed = []
         self.initial_flow = []
         self.step_m = 0.002 
@@ -110,7 +109,7 @@ class MCMC():
         fig.tight_layout()
         fig.subplots_adjust(top=0.88)
         plt.savefig('%s/malthus.png'% (self.filename), bbox_inches='tight', dpi=300, transparent=False)
-        plt.clf()
+        plt.close(fig)
         
         #    COMMUNITY MATRIX   #
         a1min, a1max = min(pos_ax), max(pos_ax)
@@ -163,7 +162,7 @@ class MCMC():
         fig.tight_layout()
         fig.subplots_adjust(top=0.88)
         plt.savefig('%s/comm_ax.png'% (self.filename),bbox_inches='tight', dpi=300,transparent=False)
-        plt.clf()
+        plt.close(fig)
 
         ####   sub- and super-diagonal  
         fig = plt.figure(figsize=(6,8))
@@ -197,15 +196,15 @@ class MCMC():
         fig.tight_layout()
         fig.subplots_adjust(top=0.88)
         plt.savefig('%s/comm_ay.png' % (self.filename), dpi=300, bbox_inches='tight',transparent=False)
-        plt.clf()
+        plt.close(fig)
 
         if not os.path.isfile(('%s/summ_stats.txt' % (self.filename))):
             with file(('%s/summ_stats.txt' % (self.filename)),'w') as outfile:
                 outfile.write('SUMMARY STATISTICS\n')
                 outfile.write('MIN, MAX, MEAN, MEDIAN, MODE\n')
                 outfile.write('Malthusian parameter\n{0}, {1}, {2}, {3}, \n{4}\n'.format(mmin,mmax,mmean,mmedian,mmode))
-                outfile.write('Ax\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a1min,a1max,a1mean,a1median,a1mode))
-                outfile.write('Ay\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a2min,a2max,a2mean,a2median,a2mode))
+                outfile.write('Main diagonal\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a1min,a1max,a1mean,a1median,a1mode))
+                outfile.write('Super-/Sub-diagonal\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a2min,a2max,a2mean,a2median,a2mode))
 
 
         # PLOT SEDIMENT AND FLOW RESPONSE THRESHOLDS #
@@ -279,7 +278,7 @@ class MCMC():
                 plt.ylim(-2.,110)
                 lgd = plt.legend(frameon=False, prop={'size':self.font+1}, bbox_to_anchor = (1.,0.2))
                 plt.savefig('%s/sediment_response_%s.png' % (self.filename, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=False)
-                plt.clf()
+                plt.close(fig)
 
         flow1_mu, flow1_ub,flow1_lb, flow2_mu, flow2_ub,flow2_lb, flow3_mu, flow3_ub,flow3_lb, flow4_mu, flow4_ub,flow4_lb = (np.zeros(self.communities) for i in range(12))
         if (self.flowsim != False):
@@ -349,7 +348,7 @@ class MCMC():
                 plt.ylim(-2.,110.)
                 lgd = plt.legend(frameon=False, prop={'size':self.font+1}, bbox_to_anchor = (1.,0.2))
                 plt.savefig('%s/flow_response_%s.png' % (self.filename, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
-                plt.clf()
+                plt.close(fig)
 
     def save_params(self,naccept, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4, pos_m, pos_ax, pos_ay, pos_diff, pos_samples):    ### SAVE RECORD OF ACCEPTED PARAMETERS ###
         if self.sedsim == True:
@@ -414,25 +413,24 @@ class MCMC():
                 outfile.write('\n# {0}\n'.format(naccept))
                 outfile.write(fx__)    
 
-    def diff_score(self, predictions, targets):
+    def diff_score(self, sim, obs):
         diff_count = 0
-        for i in range(predictions.shape[0]):
-            if targets[i] != predictions[i]:
+        for i in range(sim.shape[0]):
+            if obs[i] != sim[i]:
                 diff_count = diff_count + 1
-        diff= (float(diff_count)/predictions.shape[0])
-        print 'diff',diff
+        diff= (float(diff_count)/sim.shape[0])
         return float(diff*100)
 
-    def rmse(self, predictions, targets):
-        sed = np.count_nonzero(predictions==0.571)
-        p_sedprop = (float(sed)/predictions.shape[0])
+    def rmse(self, sim, obs):
+        sed = np.count_nonzero(sim==(self.communities+1))
+        p_sedprop = (float(sed)/sim.shape[0])
         sedprop = np.absolute(self.d_sedprop - p_sedprop)
         diff_count = 0
-        for i in range(predictions.shape[0]):
-            if targets[i] != predictions[i]:
+        for i in range(sim.shape[0]):
+            if obs[i] != sim[i]:
                 diff_count = diff_count + 1
-        rmse = np.sqrt(diff_count**2)/predictions.shape[0]
-        # rmse =(np.sqrt(((predictions - targets) ** 2).mean()))
+        rmse = np.sqrt(diff_count**2)/sim.shape[0]
+        # rmse =(np.sqrt(((sim - obs) ** 2).mean()))
         sed_rmse = rmse*0.5 + sedprop*0.5
         print 'sed_rmse', sed_rmse
         return rmse
@@ -470,6 +468,22 @@ class MCMC():
         
         return
 
+    def proposal_jump(self, current, low_limit, high_limit, jump_width):
+        proposal = current + np.random.normal(0, jump_width)
+        if proposal >= high_limit:
+            proposal = current
+        elif proposal <= low_limit:
+            proposal = current
+        # while lim_condition:
+        #     if proposal >= high_limit:
+        #         proposal = current + np.random.normal(0, jump_width)
+        #     elif proposal <= low_limit:
+        #         proposal = current + np.random.normal(0, jump_width)
+        #     else:
+        #         lim_condition = False
+
+        return proposal
+
     def sampler(self):
         data_size = self.core_data.shape[0]
         samples = self.samples
@@ -496,7 +510,7 @@ class MCMC():
         pos_ay = np.zeros(samples)
         pos_m = np.zeros(samples)
         # Create space to store fx of all samples
-        pos_samples = np.zeros((samples, self.core_data.size))
+        pos_samples = np.zeros((samples, self.core_data.shape[0]))
 
         #      INITIAL PREDICTION       #
         sed1 = np.zeros(self.communities)
@@ -511,6 +525,7 @@ class MCMC():
                 sed3[s] = pos_sed3[0,s] = np.random.uniform(0.005,0.005)
                 sed4[s] = pos_sed4[0,s] = np.random.uniform(0.005,0.005)
 
+
         flow1 = np.zeros(self.communities)
         flow2 = np.zeros(self.communities)
         flow3 = np.zeros(self.communities)
@@ -524,11 +539,9 @@ class MCMC():
                 flow3[s] = pos_flow3[0,s] = np.random.uniform(0.3,0.3)
                 flow4[s] = pos_flow4[0,s] = np.random.uniform(0.3,0.3)
         
-        max_a = -0.1
-        max_m = 0.1
-        cm_ax = pos_ax[0] = np.random.uniform(max_a,0.)
-        cm_ay = pos_ay[0] = np.random.uniform(max_a,0.)
-        m = pos_m[0] = np.random.uniform(0.,max_m)
+        cm_ax = pos_ax[0] = np.random.uniform(self.max_a,0.)
+        cm_ay = pos_ay[0] = np.random.uniform(self.max_a,0.)
+        m = pos_m[0] = np.random.uniform(0., self.max_m)
 
         if (self.sedsim == True) and (self.flowsim == False):
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4))
@@ -563,7 +576,7 @@ class MCMC():
         
         # print 'Begin sampling using MCMC random walk'
         x_tick_labels = ['No growth','Shallow', 'Mod-deep', 'Deep', 'Sediment']
-        x_tick_values = [0, 0.143, 0.286, 0.429, 0.571]
+        x_tick_values = [0,1,2,3,4]
         fig = plt.figure(figsize=(3,6))
         ax = fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
@@ -576,7 +589,7 @@ class MCMC():
         ax.set_ylim(ax.get_ylim()[::-1])
         plt.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
         fig.savefig('%s/begin.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
-        plt.clf()
+        plt.close(fig)
         
         # ACCUMULATED FIGURE SET UP
         final_fig = plt.figure(figsize=(3,6))
@@ -599,13 +612,15 @@ class MCMC():
                 tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,self.communities)
                 tmatrix = tmat.T
                 t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
-                for x in range(self.communities):#-3):
+                for x in range(self.communities):
                     for s in range(tmatrix.shape[1]):
-                        t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
-                        if t2matrix[x,s] >= self.sedlimits[x,1]:
-                            t2matrix[x,s] = tmatrix[x,s]
-                        elif t2matrix[x,s] <= self.sedlimits[x,0]:
-                            t2matrix[x,s] = tmatrix[x,s]
+                        t2matrix[x,s] = self.proposal_jump(tmatrix[x,s], self.sedlim[0], self.sedlim[1], self.step_sed)
+                        # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
+                        # if t2matrix[x,s] >= self.sedlimits[x,1]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
+                        # elif t2matrix[x,s] <= self.sedlimits[x,0]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
+                
                 # reorder each row , then transpose back as sed1, etc.
                 tmp = np.zeros((self.communities,4))
                 for x in range(t2matrix.shape[0]):
@@ -623,11 +638,14 @@ class MCMC():
                 t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
                 for x in range(self.communities):#-3):
                     for s in range(tmatrix.shape[1]):
-                        t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
-                        if t2matrix[x,s] >= self.flowlimits[x,1]:
-                            t2matrix[x,s] = tmatrix[x,s]
-                        elif t2matrix[x,s] <= self.flowlimits[x,0]:
-                            t2matrix[x,s] = tmatrix[x,s]
+
+                        t2matrix[x,s] = self.proposal_jump(tmatrix[x,s], self.flowlim[0], self.flowlim[1], self.step_flow)
+                        # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
+                        # if t2matrix[x,s] >= self.flowlimits[x,1]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
+                        # elif t2matrix[x,s] <= self.flowlimits[x,0]:
+                        #     t2matrix[x,s] = tmatrix[x,s]
+
                 # reorder each row , then transpose back as flow1, etc.
                 tmp = np.zeros((self.communities,4))
                 for x in range(t2matrix.shape[0]):
@@ -639,21 +657,10 @@ class MCMC():
                 p_flow3 = tmat[2,:]
                 p_flow4 = tmat[3,:]
 
-            p_ax = cm_ax + np.random.normal(0,self.step_a,1)
-            if p_ax > 0:
-                p_ax = cm_ax
-            elif p_ax < max_a:
-                p_ax = cm_ax
-            p_ay = cm_ay + np.random.normal(0,self.step_a,1)
-            if p_ay > 0:
-                p_ay = cm_ay
-            elif p_ay < max_a:
-                p_ay = cm_ay   
-            p_m = m + np.random.normal(0,self.step_m,1)
-            if p_m < 0:
-                p_m = m
-            elif p_m > max_m:
-                p_m = m
+            p_ax = self.proposal_jump(cm_ax, self.max_a, 0, self.step_a)
+            p_ay = self.proposal_jump(cm_ay, self.max_a, 0, self.step_a)
+            p_m = self.proposal_jump(m, 0, self.max_m, self.step_m)
+            
             v_proposal = []
             if (self.sedsim == True) and (self.flowsim == False):
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4))
@@ -755,7 +762,7 @@ class MCMC():
 
         lgd = ax_append.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
         final_fig.savefig('%s/proposals.png'% (self.filename), extra_artists = (lgd,),bbox_inches='tight',dpi=300,transparent=False)
-        plt.clf()
+        plt.close(final_fig)
 
         ##### PLOT DIFFERENCE SCORE EVOLUTION ########
         fig = plt.figure(figsize=(6,4))
@@ -764,17 +771,15 @@ class MCMC():
         x_range = np.arange(0,samples,1)
         plt.plot(x_range,pos_diff,'-',label='Difference score')
         plt.title("Difference score evolution", size=self.font+2)
-        plt.ylabel("Difference", size=self.font+1)
+        plt.ylabel("Difference [%]", size=self.font+1)
         plt.xlabel("Number of samples", size=self.font+1)
         plt.xlim(0,len(pos_diff)-1)
         lgd = plt.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
         plt.savefig('%s/diff_evolution.png' % (self.filename), bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
-        plt.clf()
+        plt.close(fig)
 
         return (pos_v, pos_tau, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count)
 
-#####################################################################
-#####################################################################
 #####################################################################
 #####################################################################
 #####################################################################
@@ -783,17 +788,21 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples=3000
+    samples=200000
     description = ''
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
     xmlinput = 'input_synth.xml'
-    datafile = 'data/synth_core.txt'
+    datafile = 'data/synth_core_vec.txt'
     core_depths, core_data = np.genfromtxt(datafile, usecols=(0,1), unpack = True) 
 
     vis = [False, False] # first for initialisation, second for cores
     sedsim, flowsim = True, True
+    sedlim = [0., 0.005]
+    flowlim = [0.,0.3]
+    max_a = -0.1
+    max_m = 0.1
     run_nb = 0
     while os.path.exists('results_pseudo_%s' % (run_nb)):
         run_nb+=1
@@ -814,54 +823,9 @@ def main():
             outfile.write('\n\tNo. samples: {0}'.format(samples))
             outfile.write('\n\tXML input: {0}'.format(xmlinput))
             outfile.write('\n\tData file: {0}'.format(datafile))
-    """"Windward sedlim = 0.005, flowlim = 0.3
-            sedlim_1 = [[0., 0.0035]]
-            sedlim_2 = [[0.001,0.0035]]
-            sedlim_3 = [[0.001,0.005]]
-            sedlim_4 = sedlim_5 = sedlim_6 = [[0.,0.]] 
-            # sedlim_4 = [[0.001,0.0035]]
-            # sedlim_5 = [[0.002,0.004]]
-            # sedlim_6 = [[0.002,0.005]]
-            flowlim_1 = [[0.02,0.3]]
-            flowlim_2 = [[0.005.,0.2]]
-            flowlim_3 = [[0.,0.15]]
-            flowlim_4 = [[0.005,0.2]]
-            flowlim_5 = [[0.002,0.1]]
-            flowlim_6 = [[0.,0.1]]
-        Leeward sedlim = 0.005, flowlim = 0.2
-            # sedlim_1 = [[0.0005,0.0035]]
-            # sedlim_2 = [[0,1e-3]]
-            # sedlim_3 = [[0,2e-4]]
-            sedlim_1 = sedlim_2 = sedlim_3 = [[0.,0.]] 
-            sedlim_4 = [[0.0005,0.0035]]
-            sedlim_5 = [[0.0005, 0.003]]
-            sedlim_6 = [[0. 0.005]]
-            flowlim_1 = [[0.05,0.3]]
-            flowlim_2 = [[0.05,0.3]]
-            flowlim_3 = [[0,0.2]]
-            flowlim_4 = [[0.01,0.3]]
-            flowlim_5 = [[0,0.2]]
-            flowlim_6 = [[0,0.1]]
-    """
-    ##### max/min values for each assemblage #####
-    sedlim_1 = [[0., 0.0035]]
-    sedlim_2 = [[0.001,0.0035]]
-    sedlim_3 = [[0.001,0.005]]
-
-    flowlim_1 = [[0.01,0.3]]
-    flowlim_2 = [[0.,0.2]]
-    flowlim_3 = [[0.,0.1]]
-    
-    sedlimits = []
-    flowlimits = []
-
-    if sedsim == True:
-        sedlimits = np.concatenate((sedlim_1,sedlim_2,sedlim_3))#sedlim_4,sedlim_5,sedlim_6))
-    if flowsim == True:
-        flowlimits = np.concatenate((flowlim_1,flowlim_2,flowlim_3))#flowlim_4,flowlim_5,flowlim_6))
 
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, timestep,  filename, xmlinput, 
-                sedsim, sedlimits, flowsim,flowlimits, vis)
+                sedsim, sedlim, flowsim,flowlim, max_a, max_m, vis)
     [pos_v, pos_tau, fx_train, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count] = mcmc.sampler()
 
     print 'successfully sampled'
@@ -892,6 +856,12 @@ def main():
 
     if not os.path.isfile(('%s/out_GLVE.csv' % (filename))):
         np.savetxt("%s/out_GLVE.csv" % (filename), np.c_[pos_m,pos_ax,pos_ay], delimiter=',')
+    
+    if not os.path.isfile(('%s/out_sed.csv' % (filename))):
+        np.savetxt("%s/out_sed.csv" % (filename), np.c_[pos_sed1,pos_sed2,pos_sed3, pos_sed4], delimiter=',')
+
+    if not os.path.isfile(('%s/out_flow.csv' % (filename))):
+        np.savetxt("%s/out_flow.csv" % (filename), np.c_[pos_flow1,pos_flow2,pos_flow3, pos_flow4], delimiter=',')
 
     if not os.path.isfile(('%s/out_pos.csv' % (filename))):
         np.savetxt("%s/out_pos.csv" % (filename), pos_v, delimiter=',')
@@ -911,11 +881,11 @@ def main():
     plt.ylim(plt.ylim()[::-1])
     plt.ylabel('Depth [m]', size=mcmc.font+1)
     x_tick_labels = ['No growth','Shallow', 'Mod-deep', 'Deep', 'Sediment']
-    x_tick_values = [0, 0.143, 0.286, 0.429, 0.571]
+    x_tick_values = [0, 1,2,3,4]
     plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=mcmc.font+1)
     plt.legend(frameon=False, prop={'size':mcmc.font+1}, bbox_to_anchor = (1.,0.2))
     plt.savefig('%s/mcmcres.png' % (filename), bbox_inches='tight', dpi=300,transparent=False)
-    plt.clf()
+    plt.close(fig)
 
     #      MAKE BOX PLOT     #
     if nCommunities == 3:
@@ -950,7 +920,7 @@ def main():
             ax2.boxplot(new_v)
             ax2.set_xlabel('Assemblage exposure thresholds', size=mcmc.font+2)
             plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
-            plt.clf()
+            plt.close(mpl_fig)
         elif ((sedsim == True) and (flowsim == True)):
             v_glve = np.zeros((pos_v.shape[0],3))
             v_glve[:,0:3] = pos_v[:,24:27]
@@ -1001,7 +971,7 @@ def main():
             # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=mcmc.font+2)
             # plt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
             # # plt.savefig('%s/v_pos_boxplot.svg'% (filename), format='svg', dpi=300)
-            plt.clf()
+            plt.close(mpl_fig)
     elif nCommunities == 6:
     	if ((sedsim == True) and (flowsim == False)) or ((sedsim == False) and (flowsim == True)):
             v_glve = np.zeros((pos_v.shape[0],3))
@@ -1058,7 +1028,7 @@ def main():
             # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=mcmc.font+2)
             # plt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
             # plt.savefig('%s/v_pos_boxplot.svg'% (filename), format='svg', dpi=300)
-            plt.clf()
+            plt.close(mpl_fig)
         elif ((sedsim == True) and (flowsim == True)):
             v_glve = np.zeros((pos_v.shape[0],3))
             v_glve[:,0:3] = pos_v[:,48:51]
@@ -1117,15 +1087,8 @@ def main():
             ax3.boxplot(v_flow)
             ax3.set_xlabel('Assemblage flow exposure thresholds', size=mcmc.font+2)
             plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
-            # mpl_fig = plt.figure(figsize=(10,4))
-            # ax = mpl_fig.add_subplot(111)
-            # ax.boxplot(new_v)
-            # ax.set_ylabel('Posterior values')
-            # ax.set_xlabel('Input vector')
-            # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=mcmc.font+2)
-            # plt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
-            # # plt.savefig('%s/v_pos_boxplot.svg'% (filename), format='svg', dpi=300)
-            plt.clf()
+            plt.close(mpl_fig)
+
     mcmc.plot_results(pos_m, pos_ax, pos_ay, pos_sed1, pos_sed2, pos_sed3, pos_sed4, pos_flow1, pos_flow2, pos_flow3, pos_flow4,burnin)
     print 'Finished simulations'
 if __name__ == "__main__": main()
