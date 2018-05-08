@@ -521,8 +521,8 @@ def main():
     description = 'New likelihood funciton, only isolating 1 parameter'
     assemblage = 2
     xmlinput = 'input_synth.xml'
-    synth_vec = 'data/synth_core_vec_1.txt'
-    synth_prop = 'data/synth_core_prop_1.txt'
+    synth_vec = 'data/synth_core_vec.txt'
+    synth_prop = 'data/synth_core_prop.txt'
     core_depths, data_vec = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
     core_data = np.loadtxt(synth_prop, usecols=(1,2,3,4))
 
@@ -547,7 +547,7 @@ def main():
     step_m = 0.01 * abs(min_m-max_m)
     step_a = 0.01 * abs(min_a-max_a)
 
-    path_name = 'results_multinom_prblikl'
+    path_name = 'results_multinomial_prblikl'
     while os.path.exists('%s_%s' % (path_name, run_nb)):
         run_nb+=1
     if not os.path.exists('%s_%s' % (path_name, run_nb)):
