@@ -146,7 +146,8 @@ class coreData:
         from matplotlib.cm import terrain
         # nbcolors = len(self.names)+3
         # JODIE EDIT: colour range from 0-1.8 from 0-1
-        nbcolors = len(self.names)+3
+        # nbcolors = len(self.names)+3
+        nbcolors = len(self.names) + 8
         colors = terrain(numpy.linspace(0, 1.25, nbcolors))
 
         # print 'Community matrix aij representing the interactions between species:'
@@ -416,6 +417,7 @@ class coreData:
             # Title
             tt1 = ax1.set_title('Sea-level [m]', size=font+2)
             tt1.set_position([.5, 1.03])
+            # fig.savefig('sealevel.png', bbox_inches='tight')
             # plt.show()
             plt.close()
 
@@ -436,6 +438,7 @@ class coreData:
                 # Title
                 tt1 = ax1.set_title('Sediment input [m/year]', size=font+2)
                 tt1.set_position([.5, 1.03])
+                # fig.savefig('sediment_input.png', bbox_inches='tight')
                 # plt.show()
                 plt.close()
 
@@ -455,8 +458,9 @@ class coreData:
                 # Title
                 tt1 = ax1.set_title('Water flow [m/sec]', size=font+2)
                 tt1.set_position([.5, 1.03])
+                # fig.savefig('flow_velocity.png', bbox_inches='tight')
                 # plt.show()
-                plt.close
+                plt.close()
 
             # plt.show()
             plt.close()

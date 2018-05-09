@@ -100,7 +100,7 @@ class Model(object):
             mtpar= self.input.__dict__["malthusParam"]
             # print 'Community matrix:', cmmat
             # print 'malthus:', mtpar
-    	##########################################################################################
+        ##########################################################################################
 
         # Seed the random number generator consistently on all nodes
         seed = None
@@ -350,13 +350,13 @@ class Model(object):
                 index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
                 # print 'no:', n, 'index',index,'value',value
                 if index == 0 and value != 0:
-                    predicted_core[n] = 0.143
+                    predicted_core[n] = 1
                 elif index == 1:
-                    predicted_core[n] = 0.286
+                    predicted_core[n] = 2
                 elif index == 2:
-                    predicted_core[n] = 0.429
+                    predicted_core[n] = 3
                 elif index == 3:
-                    predicted_core[n] = 0.571
+                    predicted_core[n] = 4
                 else:
                     predicted_core[n] = 0
             # print 'predicted_core', predicted_core
@@ -385,22 +385,21 @@ class Model(object):
                 index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
                 # print 'no:', n, 'index',index,'value',value
                 if index == 0 and value != 0:
-                    predicted_core[n] = 0.143
+                    predicted_core[n] = 1
                 elif index == 1:
-                    predicted_core[n] = 0.286
+                    predicted_core[n] = 2
                 elif index == 2:
-                    predicted_core[n] = 0.429
+                    predicted_core[n] = 3
                 elif index == 6:
-                    predicted_core[n] = 0.571
+                    predicted_core[n] = 4
                 elif index == 3:
-                    predicted_core[n] = 0.714
+                    predicted_core[n] = 5
                 elif index == 4:
-                    predicted_core[n] = 0.857
+                    predicted_core[n] = 6
                 elif index == 5:
-                    predicted_core[n] = 1.0
+                    predicted_core[n] = 7
                 else:
                     predicted_core[n] = 0
-            # print 'predicted_core', predicted_core
 
         # elif (communities == 6) and (self.opt_malthusParam == []):
         #      for n in range(0,core_depths.size):

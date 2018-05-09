@@ -95,8 +95,8 @@ class MCMC():
                 maxprop[n,idx_synth] = 1
         same= np.count_nonzero(maxprop)
         same = float(same)/intervals
-        diff = 1-same
-        return diff*100
+        diff = (1-same)*100
+        return diff
 
     def rmse(self, sim, obs):
         # where there is 1 in the sed column, count
@@ -106,12 +106,17 @@ class MCMC():
         rmse =(np.sqrt(((sim - obs) ** 2).mean()))*0.5
         return rmse + sedprop
 
+    # def nonStationaryLikelihood(self,reef, core_data, input_v):
+    	
+
     def probabilisticLikelihood(self, reef, core_data, input_v):
         sim_propn = self.run_Model(reef, input_v)
         sim_propn = sim_propn.T
         intervals = sim_propn.shape[0]
+
         # # Uncomment if noisy synthetic data is required.
         # self.NoiseToData(intervals,sim_propn)
+
         log_core = np.log(sim_propn)
         log_core[log_core == -inf] = 0
         z = log_core * core_data
@@ -121,24 +126,23 @@ class MCMC():
         return [likelihood, sim_propn, diff]
            
     def deterministicLikelihood(self, reef, core_data, input_v):
-        pred_core = self.run_Model(reef, input_v)
-        pred_core = pred_core.T
-        intervals = pred_core.shape[0]
+        sim_data = self.run_Model(reef, input_v)
+        sim_data = sim_data.T
+        intervals = sim_data.shape[0]
         z = np.zeros((intervals,self.communities+1))    
         for n in range(intervals):
             idx_data = np.argmax(core_data[n,:])
-            idx_model = np.argmax(pred_core[n,:])
-            if ((pred_core[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
+            idx_model = np.argmax(sim_data[n,:])
+            if ((sim_data[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
                 z[n,idx_data] = 1
-        same= np.count_nonzero(z)
+        same = np.count_nonzero(z)
         same = float(same)/intervals
-        diff = (1-same) *100
-        # rmse = self.rmse(pred_core, core_data)        
+        diff = 1-same
+        # rmse = self.rmse(sim_data, core_data)
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
-        loss = np.log(z)
-        # print 'sum of loss:', np.sum(loss)        
-        return [np.sum(loss), pred_core, diff]
+        likelihood = np.log(z)   
+        return [np.sum(likelihood), pred_core, diff]
 
     def saveCore(self,reef,naccept):
         path = '%s/%s' % (self.filename, naccept)
@@ -494,21 +498,9 @@ class MCMC():
         final_fig.savefig('%s/proposals.png'% (self.filename), extra_artists = (lgd,),bbox_inches='tight',dpi=300,transparent=False)
         plt.clf()
 
-        ##### PLOT DIFFERENCE SCORE EVOLUTION ########
-        fig = plt.figure(figsize=(6,4))
-        ax= fig.add_subplot(111)
-        ax.set_facecolor('#f2f2f3')
-        x_range = np.arange(0,samples,1)
-        plt.plot(x_range,pos_diff,'-',label='Difference score')
-        plt.title("Difference score evolution", size=self.font+2)
-        plt.ylabel("Difference", size=self.font+1)
-        plt.xlabel("Number of samples", size=self.font+1)
-        plt.xlim(0,len(pos_diff)-1)
-        lgd = plt.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
-        plt.savefig('%s/diff_evolution.png' % (self.filename), bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
-        plt.clf()
-
-        return (pos_v, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count, data_vec)
+        return (pos_v, pos_diff, pos_likl, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
+        	pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
+        	x_data, accept_ratio, accepted_count, data_vec)
 
 #####################################################################
 
@@ -516,7 +508,7 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 10000 #input('Enter number of samples: ')
+    samples= 2 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
     description = 'New likelihood funciton, only isolating 1 parameter'
     assemblage = 2
@@ -567,8 +559,9 @@ def main():
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, data_vec, timestep,  filename, xmlinput, 
                 sedsim, sedlim, flowsim, flowlim, vis, min_a, max_a, min_m, max_m, assemblage, step_sed, step_flow, step_m, step_a)
 
-    [pos_v, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data, pos_diff, accept_ratio, accepted_count, data_vec] = mcmc.sampler()
-
+    [pos_v, pos_diff, pos_likl, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
+    pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data,
+    accept_ratio, accepted_count, data_vec] = mcmc.sampler()
     print 'Successfully sampled'
     
     burnin = 0.1 * samples  # use post burn in samples
@@ -584,14 +577,22 @@ def main():
     pos_ax = pos_ax[int(burnin):]
     pos_ay = pos_ay[int(burnin):]
     pos_m = pos_m[int(burnin):]
-    diff_mu = np.mean(pos_diff[int(burnin):])
-    diff_std = np.std(pos_diff[int(burnin):])
-    diff_mode, count = stats.mode(pos_diff[int(burnin):])
+    pos_likl = pos_likl[int(burnin):]
+    likl_mu = np.mean(pos_likl)
+    likl_std = np.std(pos_likl)
+    likl_mode, likl_count = stats.mode(pos_likl)
+    pos_diff = pos_diff[int(burnin):]
+    diff_mu = np.mean(pos_diff)
+    diff_std = np.std(pos_diff)
+    diff_mode, diff_count = stats.mode(pos_diff)
     
-    print 'mean diff:',diff_mu, 'standard deviation:', diff_std
+    print 'Mean diff:',diff_mu, ', standard deviation:', diff_std
 
     with file(('%s/out_results.txt' % (filename)),'w') as outres:
-        outres.write('Mean diff: {0}\nStandard deviation: {1}\nMode: {2}\n'.format(diff_mu, diff_std,diff_mode))
+        outres.write('DIFFERENCE\n')
+        outres.write('\tMean: {0}, st. dev: {1}, mode: {2}\n'.format(diff_mu, diff_std,diff_mode))
+        outres.write('LIKELIHOOD\n')
+        outres.write('\tMean: {0}, st. dev: {1}, mode: {2}\n'.format(likl_mu, likl_std, likl_mode))
         outres.write('Accept ratio: {0} %\nSamples accepted : {1} out of {2}'.format(accept_ratio, accepted_count, samples))
 
     if not os.path.isfile(('%s/pos_burnin_GLVE.csv' % (filename))):
@@ -603,12 +604,16 @@ def main():
     if not os.path.isfile(('%s/pos_burnin_flow.csv' % (filename))):
         np.savetxt("%s/pos_burnin_flow.csv" % (filename), np.c_[pos_flow1,pos_flow2,pos_flow3, pos_flow4], delimiter=',')
 
+    if not os.path.isfile(('%s/pos_burnin_likl.csv' % (filename))):
+        np.savetxt("%s/pos_burnin_likl.csv" % (filename), pos_likl, delimiter=',')
+
     if not os.path.isfile(('%s/pos_burnin_proposal.csv' % (filename))):
         np.savetxt("%s/pos_burnin_proposal.csv" % (filename), pos_v, delimiter=',')
 
     plotResults.plotPosCore(pos_samples,core_depths, data_vec, x_data, mcmc.font, mcmc.width, filename)
     plotResults.boxPlots(nCommunities, pos_v, sedsim, flowsim, mcmc.font,mcmc.width,filename)    
-    plotResults.plotResults(mcmc.filename, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
+    plotResults.plotLiklAndDiff(pos_likl, pos_diff, samples, mcmc.font, filename)
+    plotResults.plotParameters(mcmc.filename, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
         pos_m, pos_ax, pos_ay, mcmc.true_m, mcmc.true_ax, mcmc.true_ay, 
         pos_sed1, pos_sed2, pos_sed3, pos_sed4, mcmc.initial_sed,
         pos_flow1, pos_flow2, pos_flow3, pos_flow4, mcmc.initial_flow)

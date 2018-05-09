@@ -12,9 +12,11 @@ distribution of parameters used in BayesReef.
 """
 
 import os
+import csv
 import numpy as np
-import matplotlib.pyplot as plt
+import scipy as sp
 from scipy import stats 
+import matplotlib.pyplot as plt
 
 def plotPosCore(pos_samples,core_depths, data_vec, x_data, font, width, filename):
     fx_mu = pos_samples.mean(axis=0)
@@ -39,7 +41,40 @@ def plotPosCore(pos_samples,core_depths, data_vec, x_data, font, width, filename
     plt.savefig('%s/mcmcres.png' % (filename), bbox_inches='tight', dpi=300,transparent=False)
     plt.clf()
 
-def plotResults(fname, sedsim, flowsim,communities, 
+# def meanConfidenceInterval(data,confidence=95):
+#     a = 1.0*np.array(data)
+#     print 'array of data', a, 'data', data
+#     n = len(a)
+#     m, se = np.mean(a), sp.stats.sem(a)
+#     h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+#     return m, m-h, m+h
+
+def plotLiklAndDiff(pos_likl,pos_diff, samples, font, filename):
+    x_range = np.arange(0,samples,1)
+
+    fig = plt.figure(figsize=(6,4))
+    ax= fig.add_subplot(111)
+    ax.set_facecolor('#f2f2f3')
+    plt.plot(x_range,pos_diff,'-')
+    plt.title("Difference score evolution", size=font+2)
+    plt.ylabel("Difference", size=font+1)
+    plt.xlabel("Number of samples", size=font+1)
+    plt.xlim(0,len(pos_diff)-1)
+    plt.savefig('%s/evol_diff.png' % (filename), bbox_inches='tight',dpi=300,transparent=False)
+    plt.clf()
+
+    fig = plt.figure(figsize=(6,4))
+    ax= fig.add_subplot(111)
+    ax.set_facecolor('#f2f2f3')
+    plt.plot(x_range,pos_likl,'-')
+    plt.title("Likelihood evolution", size=font+2)
+    plt.ylabel("Log likelihood", size=font+1)
+    plt.xlabel("Number of samples", size=font+1)
+    plt.xlim(0,len(pos_likl)-1)
+    plt.savefig('%s/evol_likl.png' % (filename), bbox_inches='tight',dpi=300,transparent=False)
+    plt.clf()
+
+def plotParameters(fname, sedsim, flowsim,communities, 
     pos_m, pos_ax, pos_ay, true_m, true_ax, true_ay,
     pos_sed1, pos_sed2, pos_sed3, pos_sed4, true_sed,
     pos_flow1, pos_flow2, pos_flow3, pos_flow4,true_flow):
@@ -53,8 +88,8 @@ def plotResults(fname, sedsim, flowsim,communities,
     #########################
     mmin, mmax = min(pos_m), max(pos_m)
     mspace = np.linspace(mmin,mmax,len(pos_m))
-    mm,ms = stats.norm.fit(pos_m)
-    pdf_m = stats.norm.pdf(mspace,mm,ms)
+    # mm,ms = stats.norm.fit(pos_m)
+    # pdf_m = stats.norm.pdf(mspace,mm,ms)
     mmean=np.mean(pos_m)
     mmedian=np.median(pos_m)
     mmode,count=stats.mode(pos_m)
@@ -93,12 +128,12 @@ def plotResults(fname, sedsim, flowsim,communities,
     #########################
     a1min, a1max = min(pos_ax), max(pos_ax)
     a1space = np.linspace(a1min,a1max,len(pos_ax))
-    a1m,a1s = stats.norm.fit(pos_ax)
-    pdf_a1 = stats.norm.pdf(a1space,a1m,a1s)
+    # a1m,a1s = stats.norm.fit(pos_ax)
+    # pdf_a1 = stats.norm.pdf(a1space,a1m,a1s)
     a2min, a2max = min(pos_ay), max(pos_ay)
     a2space = np.linspace(a2min,a2max,len(pos_ay))
-    a2m,a2s = stats.norm.fit(pos_ay)
-    pdf_a2 = stats.norm.pdf(a2space,a2m,a2s)
+    # a2m,a2s = stats.norm.fit(pos_ay)
+    # pdf_a2 = stats.norm.pdf(a2space,a2m,a2s)
     a1min=a1min
     a1max=a1max
     a1mean=np.mean(pos_ax)
@@ -172,13 +207,18 @@ def plotResults(fname, sedsim, flowsim,communities,
     plt.savefig('%s/comm_ay.png' % (fname), dpi=300, bbox_inches='tight',transparent=False)
     plt.clf()
 
-    if not os.path.isfile(('%s/summ_stats.txt' % (fname))):
-        with file(('%s/summ_stats.txt' % (fname)),'w') as outfile:
-            outfile.write('SUMMARY STATISTICS\n')
-            outfile.write('MIN, MAX, MEAN, MEDIAN, MODE\n')
-            outfile.write('Malthusian parameter\n{0}, {1}, {2}, {3}, \n{4}\n'.format(mmin,mmax,mmean,mmedian,mmode))
-            outfile.write('Main diagonal\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a1min,a1max,a1mean,a1median,a1mode))
-            outfile.write('Super-/Sub-diagonal\n{0}, {1}, {2}, {3}, \n{4}\n'.format(a2min,a2max,a2mean,a2median,a2mode))
+    ############################
+    # PRINT SUMMARY STATISTICS #
+    ############################
+    if not os.path.isfile(('%s/summ_stats.csv' % (fname))):
+        with file(('%s/summ_stats.csv' % (fname)),'wb') as outfile:
+            writer = csv.writer(outfile, delimiter=',')
+            writer.writerow(["Param","Min", "Max","Mean", "Median", "Mode"])
+            writer.writerow(["Malth", mmin,mmax,mmean,mmedian, float(mmode)])
+            writer.writerow(["A main", a1min,a1max,a1mean,a1median,float(a1mode)])
+            writer.writerow(["A super/sub", a2min,a2max,a2mean,a2median,float(a2mode)])
+    print 'mmode', mmode, 'float mmode', float(mmode)
+    
 
     #############################################
     #   SEDIMENT AND FLOW RESPONSE THRESHOLDS   #
@@ -225,16 +265,13 @@ def plotResults(fname, sedsim, flowsim,communities,
             sed2_mode,count=stats.mode(pos_sed2[:,a])
             sed3_mode,count=stats.mode(pos_sed3[:,a])
             sed4_mode,count=stats.mode(pos_sed4[:,a])
-
-
-            with file(('%s/summ_stats.txt' % (fname)),'a') as outfile:
-                outfile.write('\n# Sediment threshold: {0}\n'.format(a_labels[a]))
-                outfile.write('5TH %ILE, 95TH %ILE, MEAN, MEDIAN\n')
-                outfile.write('Sed1\n{0}, {1}, {2}, {3}\n'.format(sed1_min,sed1_max,sed1_mu_,sed1_med))
-                outfile.write('Sed2\n{0}, {1}, {2}, {3}\n'.format(sed2_min,sed2_max,sed2_mu_,sed2_med))
-                outfile.write('Sed3\n{0}, {1}, {2}, {3}\n'.format(sed3_min,sed3_max,sed3_mu_,sed3_med))
-                outfile.write('Sed4\n{0}, {1}, {2}, {3}\n'.format(sed4_min,sed4_max,sed4_mu_,sed4_med))
-                outfile.write('Modes\n\tSed1:\t{0}\n\tSed2:\t{1}\n\tSed3:\t{2}\n\tSed4:\t{3}'.format(sed1_mode,sed2_mode,sed3_mode,sed4_mode))
+            with file(('%s/summ_stats.csv' % (fname)),'ab') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                writer.writerow([a_labels[a]])
+                writer.writerow(["Sed 1", sed1_min,sed1_max,sed1_mu_,sed1_med, float(sed1_mode)])
+                writer.writerow(["Sed 1", sed2_min,sed2_max,sed2_mu_,sed2_med, float(sed2_mode)])
+                writer.writerow(["Sed 3", sed3_min,sed3_max,sed3_mu_,sed3_med, float(sed3_mode)])
+                writer.writerow(["Sed 4", sed4_min,sed4_max,sed4_mu_,sed4_med, float(sed4_mode)])
 
             cy = [0,100,100,0]
             cmu = [sed1_mu[a], sed2_mu[a], sed3_mu[a], sed4_mu[a]]
@@ -341,15 +378,14 @@ def plotResults(fname, sedsim, flowsim,communities,
             flow2_mode,count= stats.mode(pos_flow2[:,a])
             flow3_mode,count= stats.mode(pos_flow3[:,a])
             flow4_mode,count= stats.mode(pos_flow4[:,a])
+            with file(('%s/summ_stats.csv' % (fname)),'ab') as outfile:
+                writer = csv.writer(outfile, delimiter=',')
+                writer.writerow([a_labels[a]])
+                writer.writerow(["Flow 1", flow1_min,flow1_max,flow1_mu_,flow1_med, float(flow1_mode)])
+                writer.writerow(["Flow 1", flow2_min,flow2_max,flow2_mu_,flow2_med, float(flow2_mode)])
+                writer.writerow(["Flow 3", flow3_min,flow3_max,flow3_mu_,flow3_med, float(flow3_mode)])
+                writer.writerow(["Flow 4", flow4_min,flow4_max,flow4_mu_,flow4_med, float(flow4_mode)])
 
-            with file(('%s/summ_stats.txt' % (fname)),'a') as outfile:
-                outfile.write('\n# Water flow threshold: {0}\n'.format(a_labels[a]))
-                outfile.write('#5TH %ILE, 95TH %ILE, MEAN, MEDIAN\n')
-                outfile.write('# flow1\n{0}, {1}, {2}, {3}\n'.format(flow1_min,flow1_max,flow1_mu_,flow1_med))
-                outfile.write('# flow2\n{0}, {1}, {2}, {3}\n'.format(flow2_min,flow2_max,flow2_mu_,flow2_med))
-                outfile.write('# flow3\n{0}, {1}, {2}, {3}\n'.format(flow3_min,flow3_max,flow3_mu_,flow3_med))
-                outfile.write('# flow4\n{0}, {1}, {2}, {3}\n'.format(flow4_min,flow4_max,flow4_mu_,flow4_med))
-                outfile.write('Modes\n\tFlow1:\t{0}\n\tFlow2:\t{1}\n\tFlow3:\t{2}\n\tFlow4:\t{3}'.format(flow1_mode,flow2_mode,flow3_mode,flow4_mode))
 
             cy = [0,100,100,0]
             cmu = [flow1_mu[a], flow2_mu[a], flow3_mu[a], flow4_mu[a]]
@@ -415,6 +451,7 @@ def plotResults(fname, sedsim, flowsim,communities,
             fig.tight_layout()
             plt.savefig('%s/flow_threshold_trace_%s.png'% (fname, a),bbox_inches='tight', dpi=300,transparent=False)
             plt.clf()
+
 
 # Script to make box plots 
 def boxPlots(communities, pos_v, sedsim, flowsim, font, width, filename):

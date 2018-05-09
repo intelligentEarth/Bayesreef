@@ -236,22 +236,11 @@ class modelPlot():
                     # print 'next depth_incrementor', depth_incrementor, 'm \n\n'
                     id_prev=idx
         return p2, output_core, core_depths
-        
-    def find_nearest(self, array,value):
-        idx = (np.abs(array-value)).argmin()
-        return array[idx]
 
     def core_timetodepth(self, communities, core_depths):
         ids = np.where(self.depth[:-1]>0)[0]
         p2 = np.zeros((self.sedH.shape))
         p2[:,ids] = self.sedH[:,ids]/self.depth[ids]
-        # print ' p2[0,:].size',  p2[0,:].size
-        # print 'p2[1,:]', p2[1,:]
-        # print ' p2[2,:]',  p2[2,:]
-        # print ' p2[3,:]',  p2[3,:]
-        # print ' p2[4,:]',  p2[4,:]
-        # print ' p2[5,:]',  p2[5,:]
-        # print ' p2[6,:]',  p2[6,:]
 
         bottom = self.surf + self.depth[:-1].sum()
         d = bottom - np.cumsum(self.depth[:-1])
@@ -371,7 +360,7 @@ class modelPlot():
         colsed[len(self.sedH)-1]=np.array([244./256.,164/256.,96/256.,1.])
 
         # Define figure size
-        fig = plt.figure(figsize=size, dpi=dpi)
+        fig = plt.figure(figsize=size, dpi=dpi, constrained_layout=True)
         gs = gridspec.GridSpec(1,11)
         ax1 = fig.add_subplot(gs[:3])
         ax2 = fig.add_subplot(gs[3:6], sharey=ax1)
@@ -416,7 +405,7 @@ class modelPlot():
         ax4.get_yaxis().set_visible(False)
         ax5.get_xaxis().set_visible(False)
         ax5.get_yaxis().set_visible(False)
-        lgd = ax1.legend(frameon=False, loc=1, prop={'size':font+1}, bbox_to_anchor=(5.2,0.2))
+        lgd = ax1.legend(frameon=True, loc='lower left', prop={'size':font+1})
         ax1.locator_params(axis='x', nbins=5)
         ax2.locator_params(axis='x', nbins=5)
         ax3.locator_params(axis='x', nbins=5)
@@ -463,6 +452,9 @@ class modelPlot():
             fig.savefig(figname, bbox_extra_artists=(lgd,), bbox_inches='tight')
             print 'Figure has been saved in',figname
         plt.close()
+
+
+
         # Define figure size
         fig = plt.figure(figsize=size, dpi=dpi)
         gs = gridspec.GridSpec(1,11)
