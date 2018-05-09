@@ -28,3 +28,5 @@ Testing/mcmc_6.py
 Testing/results_pseudo*
 Testing/likelihood_surface
 Testing/saved_results
+Testing/misc
+
