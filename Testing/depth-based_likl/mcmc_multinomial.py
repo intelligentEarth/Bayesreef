@@ -25,7 +25,7 @@ c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
-    def __init__(self, simtime, samples, communities, core_data, core_depths,data_vec, timestep,filename, 
+    def __init__(self, simtime, samples, communities, data_depth, core_data, core_depths,data_vec, timestep,filename, 
         xmlinput, sedsim, sedlim, flowsim, flowlim, vis, min_a,max_a, min_m, max_m,
         assemblage, step_sed, step_flow, step_m, step_a):
 
@@ -34,7 +34,8 @@ class MCMC():
         self.filename = filename
         self.input = xmlinput
         self.communities = communities
-        self.samples = samples       
+        self.samples = samples   
+        self.data_depth = data_depth    
         self.core_data = core_data
         self.core_depths = core_depths
         self.data_vec = data_vec
@@ -60,8 +61,7 @@ class MCMC():
         self.min_m = min_m
         self.max_m = max_m
 
-
-    def run_Model(self, reef, input_vector):
+    def runModel(self, reef, input_vector):
         reef.convert_vector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
         self.initial_sed, self.initial_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
         if self.vis[0] == True:
@@ -106,39 +106,84 @@ class MCMC():
         rmse =(np.sqrt(((sim - obs) ** 2).mean()))*0.5
         return rmse + sedprop
 
-    # def nonStationaryLikelihood(self,reef, core_data, input_v):
-    	
-
-    def probabilisticLikelihood(self, reef, core_data, input_v):
-        sim_propn = self.run_Model(reef, input_v)
+    def nonStationaryLikelihood(self,reef, synth_data, synth_depths, input_v):
+        sim_propn, sim_depths = self.runModel(reef,input_v) # write code to get depths for the proportions 
         sim_propn = sim_propn.T
+        print 'sim_propn', sim_propn
+        print 'sim_depths', sim_depths
         intervals = sim_propn.shape[0]
+        cutpoints_assm = []
+        cutpoints_depth = []
+        for i in range(1,intervals):
+            a = np.argmax(sim_propn[i])
+            b = np.argmax(sim_propn[i-1])
+            if not (a == b):
+                cutpoints_assm = np.append(cutpoints_assm, a)
+                cutpoints_depth = np.append(cutpoints_depth, sim_depths[i])
 
-        # # Uncomment if noisy synthetic data is required.
-        # self.NoiseToData(intervals,sim_propn)
+        print 'list of cut-points', cutpoints_assm
+        print 'depths of cut-points', cutpoints_depth
+        
+        z = np.zeros(len(cutpoints_assm))
+        for idx, sim_cp in enumerate(cutpoints_depth):
+            print 'cutpoint', sim_cp
+            if sim_cp <= synth_depths[idx]:
+                if np.argmax(cutpoints_assm[idx]) == np.argmax(synth_data[idx]):
+                    z = np.append(z, np.argmax(cutpoints_assm[idx]))
+                else:
+                    likelihood=0
+                    break
+            else:
+                likelihood=0
+                break
+        return likelihood
 
-        log_core = np.log(sim_propn)
-        log_core[log_core == -inf] = 0
-        z = log_core * core_data
-        likelihood = np.sum(z)
-        diff = self.diffScore(sim_propn,core_data, intervals)
-        # rmse = self.rmse(sim_propn, self.core_data)
-        return [likelihood, sim_propn, diff]
+
+        """
+        1. Locate position of cut-off points and assemblage transition in the synthetic data
+        1a) produce synthetic data from the p2 nd array, and make the 'data points' the location of the cut-off points and the value in that array
+        2. From the bottom of sim core, find the location of the cut-off points and what is contained in each section 
+        3a.  store probabilities in an empty list z, to get product of at end
+        3b. In loop,
+        	check and see if first sim cut-point is LEQ synth cut-point
+        	For given sim cut-point, check that all below sim cut-point is same assemblage as synth cut point
+        	If it's the same, write to z the proportion of max. cut point 
+        	if it is different, print likelihood as 0, break loop, return zero. 
+        	continue to second cut-point
+        """
+
+
+
+    def probabilisticLikelihood(self, reef, synth_data, input_v):
+            sim_propn = self.runModel(reef, input_v)
+            sim_propn = sim_propn.T
+            intervals = sim_propn.shape[0]
+
+            # # Uncomment if noisy synthetic data is required.
+            # self.NoiseToData(intervals,sim_propn)
+
+            log_core = np.log(sim_propn)
+            log_core[log_core == -inf] = 0
+            z = log_core * synth_data
+            likelihood = np.sum(z)
+            diff = self.diffScore(sim_propn,synth_data, intervals)
+            # rmse = self.rmse(sim_propn, self.synth_data)
+            return [likelihood, sim_propn, diff]
            
-    def deterministicLikelihood(self, reef, core_data, input_v):
-        sim_data = self.run_Model(reef, input_v)
+    def deterministicLikelihood(self, reef, synth_data, input_v):
+        sim_data = self.runModel(reef, input_v)
         sim_data = sim_data.T
         intervals = sim_data.shape[0]
         z = np.zeros((intervals,self.communities+1))    
         for n in range(intervals):
-            idx_data = np.argmax(core_data[n,:])
+            idx_data = np.argmax(synth_data[n,:])
             idx_model = np.argmax(sim_data[n,:])
             if ((sim_data[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
                 z[n,idx_data] = 1
         same = np.count_nonzero(z)
         same = float(same)/intervals
         diff = 1-same
-        # rmse = self.rmse(sim_data, core_data)
+        # rmse = self.rmse(sim_data, synth_data)
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
         likelihood = np.log(z)   
@@ -514,10 +559,12 @@ def main():
     assemblage = 2
     xmlinput = 'input_synth.xml'
     synth_vec = 'data/synth_core_vec.txt'
-    synth_prop = 'data/synth_core_prop.txt'
     core_depths, data_vec = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
+    synth_prop = 'data/synth_core_prop.txt'
     core_data = np.loadtxt(synth_prop, usecols=(1,2,3,4))
-
+    data_depth=0
+    # synth_data = 'data/cutpoint_vec_test.txt'
+    # data_depth, core_data = np.genfromtxt(synth_data, usecols=(0,1), unpack=True)
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
@@ -556,7 +603,7 @@ def main():
             outfile.write('\nXML input: {0}'.format(xmlinput))
             outfile.write('\nData file: {0}'.format(synth_vec))
 
-    mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, data_vec, timestep,  filename, xmlinput, 
+    mcmc = MCMC(simtime, samples, nCommunities, data_depth, core_data, core_depths, data_vec, timestep,  filename, xmlinput, 
                 sedsim, sedlim, flowsim, flowlim, vis, min_a, max_a, min_m, max_m, assemblage, step_sed, step_flow, step_m, step_a)
 
     [pos_v, pos_diff, pos_likl, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,

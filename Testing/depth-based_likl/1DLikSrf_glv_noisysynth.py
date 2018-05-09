@@ -290,7 +290,7 @@ class MCMC():
 
             # USER DEFINED: Substitute generated variables into proposal vector 
 
-            ay = p_v1
+            # ay = p_v1
             
             # Proposal to be passed to runModel
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
@@ -335,9 +335,8 @@ def main():
     v1_title = r'$\alpha_s$'# r'$\varepsilon$'#r'$\alpha_m$'
     min_v =-0.15
     max_v = 0
+    description = '1D likelihood surface, %s' % v1
 
-
-    description = 'Likelihood surface: %s' % (v1)
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
