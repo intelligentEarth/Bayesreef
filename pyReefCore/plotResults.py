@@ -24,11 +24,11 @@ def plotPosCore(pos_samples,core_depths, data_vec, x_data, font, width, filename
     fx_low = np.percentile(pos_samples, 5, axis=0)
 
     fig = plt.figure(figsize=(3,6))
-    plt.plot(data_vec, x_data,label='Synthetic core', color='k')
-    plt.plot(fx_mu,x_data, label='Pred. (mean)',linewidth=1,linestyle='--')
-    plt.plot(fx_low, x_data, label='Pred. (5th %ile)',linewidth=1,linestyle='--')
-    plt.plot(fx_high,x_data, label='Pred. (95th %ile)',linewidth=1,linestyle='--')
-    plt.fill_betweenx(x_data, fx_low, fx_high, facecolor='mediumaquamarine', alpha=0.4, label=None)
+    plt.plot(data_vec, core_depths,label='Synthetic core', color='k')
+    plt.plot(fx_mu,core_depths, label='Pred. (mean)',linewidth=1,linestyle='--')
+    plt.plot(fx_low, core_depths, label='Pred. (5th %ile)',linewidth=1,linestyle='--')
+    plt.plot(fx_high,core_depths, label='Pred. (95th %ile)',linewidth=1,linestyle='--')
+    plt.fill_betweenx(core_depths, fx_low, fx_high, facecolor='mediumaquamarine', alpha=0.4, label=None)
     plt.title("Core Data vs MCMC Uncertainty", size=font+2)
     plt.ylim([0.,np.amax(core_depths)])
     plt.ylim(plt.ylim()[::-1])
@@ -51,6 +51,8 @@ def plotPosCore(pos_samples,core_depths, data_vec, x_data, font, width, filename
 
 def plotLiklAndDiff(pos_likl,pos_diff, samples, font, filename):
     x_range = np.arange(0,samples,1)
+    print 'samples', samples, samples.shape
+    print 'xrange', x_range, x_range.shape
 
     fig = plt.figure(figsize=(6,4))
     ax= fig.add_subplot(111)
@@ -208,7 +210,7 @@ def plotParameters(fname, sedsim, flowsim,communities,
     plt.clf()
 
     ############################
-    # PRINT SUMMARY STATISTICS #
+    # WRITE SUMMARY STATISTICS #
     ############################
     if not os.path.isfile(('%s/summ_stats.csv' % (fname))):
         with file(('%s/summ_stats.csv' % (fname)),'wb') as outfile:
@@ -217,7 +219,6 @@ def plotParameters(fname, sedsim, flowsim,communities,
             writer.writerow(["Malth", mmin,mmax,mmean,mmedian, float(mmode)])
             writer.writerow(["A main", a1min,a1max,a1mean,a1median,float(a1mode)])
             writer.writerow(["A super/sub", a2min,a2max,a2mean,a2median,float(a2mode)])
-    print 'mmode', mmode, 'float mmode', float(mmode)
     
 
     #############################################

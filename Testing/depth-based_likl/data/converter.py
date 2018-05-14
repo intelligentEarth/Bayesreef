@@ -10,14 +10,13 @@ import matplotlib.mlab as mlab
 
 
 def main():
-	src = 'synthetic_core'
-	datafile = '%s/synth_core_3_prop.txt' % src
+	datafile = 'data_probstic_08.txt'
 	core_depths, a1,a2,a3,cs = np.genfromtxt(datafile, usecols=(0,1,2,3,4), unpack=True)
 
 
 	idx=0
 	# write multinomial matrix
-	with file('synth_core_prop_1.txt', 'wb') as outfile:
+	with file('synth_core_prop_08.txt', 'wb') as outfile:
 		for x in range(core_depths.size):
 			slc=[]
 			rev = x#-1-x
@@ -30,7 +29,7 @@ def main():
 			for y in range(4):
 				outfile.write('{0}\t'.format(vector[y]))
 			outfile.write('\n')
-	with file('synth_core_vec_1.txt', 'wb') as outfile:
+	with file('synth_core_vec_08.txt', 'wb') as outfile:
 		for x in range(core_depths.size):
 			slc=[]
 			slc = np.append(slc, (a1[x],a2[x],a3[x],cs[x]))

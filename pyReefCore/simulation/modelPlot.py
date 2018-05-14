@@ -133,7 +133,7 @@ class modelPlot():
         # Legend, title and labels
         plt.grid()
         lgd = plt.legend(frameon=False,loc=4,prop={'size':font+1}, bbox_to_anchor=(1.2,-0.02))
-        plt.xlabel('Time [y]',size=font+2)
+        plt.xlabel('Simulation time [y]',size=font+2)
         plt.ylabel('Population',size=font+2)
         plt.ylim(0., int(self.pop.max())+1)
         plt.xlim(0., self.timeCarb.max())
@@ -278,6 +278,9 @@ class modelPlot():
         # # print 'sedH', self.sedH.shape, self.sedH #4*171
         return propn_asmb_time.T, self.timeLay
 
+    def getTimePlotParameters(self, colors=None):
+        return self.timeCarb, self.pop, self.names
+    
     def drawCore(self, depthext = None, thext = None, propext = [0.,1.], lwidth = 3,
                  colsed=None, coltime=None, size=(8,10), font=8, dpi=80, figname=None,
                  filename = None, sep = '\t'):

@@ -19,69 +19,74 @@ import fnmatch
 import matplotlib as mpl
 from cycler import cycler
 from scipy import stats 
+from matplotlib.cm import terrain, plasma, Set2
 
 cmap=plt.cm.Set2
 c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
-    def __init__(self, simtime, samples, communities, data_depth, core_data, core_depths,data_vec, timestep,filename, 
-        xmlinput, sedsim, sedlim, flowsim, flowlim, vis, min_a,max_a, min_m, max_m,
-        assemblage, step_sed, step_flow, step_m, step_a):
+    def __init__(self, filename, xmlinput, simtime, samples, nCommunities, sedsim, sedlim, flowsim, flowlim, vis,
+        data_depths, data_vec_d, data_times, data_vec_t, core_data, true_pop, true_timeCarb,
+        min_m, max_m, true_m, step_m, min_a, max_a, true_ax, true_ay,step_a, step_sed, step_flow, assemblage):
 
         self.font = 10
         self.width = 1
+        self.colors = terrain(np.linspace(0, 1.8, 14)) #len(reef.core.coralH)+10))
+        self.colors2 = plasma(np.linspace(0, 1, 174)) #len(reef.core.layTime)+3))
         self.filename = filename
         self.input = xmlinput
-        self.communities = communities
-        self.samples = samples   
-        self.data_depth = data_depth    
-        self.core_data = core_data
-        self.core_depths = core_depths
-        self.data_vec = data_vec
-        self.timestep = timestep
-        self.vis = vis
+        self.simtime = simtime
+        self.samples = samples
+        self.communities = nCommunities
         self.sedsim = sedsim
-        self.flowsim = flowsim
         self.sedlim = sedlim
         self.flowlim = flowlim
-        self.simtime = simtime
-        self.initial_sed = []
-        self.initial_flow = []
+        self.flowsim = flowsim
+        self.vis = vis   
+        self.data_depths = data_depths
+        self.data_vec_d = data_vec_d
+        self.data_times = data_times
+        self.data_vec_t = data_vec_t
+        self.core_data = core_data
+        self.true_pop = true_pop
+        self.true_timeCarb = true_timeCarb
+        self.min_m = min_m
+        self.max_m = max_m
+        self.min_a = min_a
+        self.max_a = max_a
         self.step_m =step_m #0.002 # <1%
         self.step_a =step_a #0.002 # <1%
         self.step_sed = step_sed #0.0001 # 2%
-        self.step_flow = step_flow #0.0015 # 0.05%
-        self.true_m = 0.08
-        self.true_ax = -0.01
-        self.true_ay = -0.03
+        self.step_flow = step_flow #0.0015 # 0.05%        
+        self.true_m = true_m
+        self.true_ax = true_ax
+        self.true_ay = true_ay
+        self.true_sed = []
+        self.true_flow = []
         self.assemblage = assemblage
-        self.min_a = min_a
-        self.max_a = max_a
-        self.min_m = min_m
-        self.max_m = max_m
-
+        self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
+        
     def runModel(self, reef, input_vector):
         reef.convertVector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
-        self.initial_sed, self.initial_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
+        self.true_sed, self.true_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
         # if self.vis[0] == True:
             # reef.core.initialSetting(size=(8,2.5), size2=(8,3.5)) # View initial parameters
         reef.run_to_time(self.simtime,showtime=100.)
         # if self.vis[1] == True:
-        #     from matplotlib.cm import terrain, plasma
-        #     nbcolors = len(reef.core.coralH)+10
-        #     colors = terrain(np.linspace(0, 1.8, nbcolors))
-        #     nbcolors = len(reef.core.layTime)+3
-        #     colors2 = plasma(np.linspace(0, 1, nbcolors))
-        #     reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=300)
-        sim_output, sim_timelay = reef.plot.convertTimeStructure() #modelPlot.py
-        return sim_output, sim_timelay
+        #     reef.plot.drawCore(lwidth = 3, colsed=self.colors, coltime = self.colors2, size=(9,8), font=8, dpi=300)
+        sim_output_t, sim_timelay = reef.plot.convertTimeStructure() #modelPlot.py
+        sim_output_d = reef.plot.convertDepthStructure(self.communities, self.data_depths)
+        return sim_output_t, sim_output_d,sim_timelay
 
-    def convertCoreFormat(self, core, communities):
+    def convertCoreFormat(self, core):
         vec = np.zeros(core.shape[0])
         for n in range(len(vec)):
-            idx = np.argmax(core[n,:])# get index,
-            vec[n] = idx+1 # +1 so that zero is preserved as 'none'
+            if not all(v == 0 for v in core[n,:]):
+                idx = np.argmax(core[n,:])# get index,
+                vec[n] = idx+1 # +1 so that zero is preserved as 'none'
+            else:
+                vec[n] = -1.
         return vec
 
     def diffScore(self, sim_data,synth_data,intervals):
@@ -105,6 +110,18 @@ class MCMC():
         return rmse + sedprop
 
     def nonStationaryLikelihood(self,reef, synth_data, synth_depths, input_v):
+        """
+        1. Locate position of cut-off points and assemblage transition in the synthetic data
+        1a) produce synthetic data from the p2 nd array, and make the 'data points' the location of the cut-off points and the value in that array
+        2. From the bottom of sim core, find the location of the cut-off points and what is contained in each section 
+        3a.  store probabilities in an empty list z, to get product of at end
+        3b. In loop,
+            check and see if first sim cut-point is LEQ synth cut-point
+            For given sim cut-point, check that all below sim cut-point is same assemblage as synth cut point
+            If it's the same, write to z the proportion of max. cut point 
+            if it is different, print likelihood as 0, break loop, return zero. 
+            continue to second cut-point
+        """
         sim_propn, sim_depths = self.runModel(reef,input_v) # write code to get depths for the proportions 
         sim_propn = sim_propn.T
         print 'sim_propn', sim_propn
@@ -136,53 +153,57 @@ class MCMC():
                 break
         return likelihood
 
-
-        """
-        1. Locate position of cut-off points and assemblage transition in the synthetic data
-        1a) produce synthetic data from the p2 nd array, and make the 'data points' the location of the cut-off points and the value in that array
-        2. From the bottom of sim core, find the location of the cut-off points and what is contained in each section 
-        3a.  store probabilities in an empty list z, to get product of at end
-        3b. In loop,
-        	check and see if first sim cut-point is LEQ synth cut-point
-        	For given sim cut-point, check that all below sim cut-point is same assemblage as synth cut point
-        	If it's the same, write to z the proportion of max. cut point 
-        	if it is different, print likelihood as 0, break loop, return zero. 
-        	continue to second cut-point
-        """
+        
+    # def noisyDataLikelihood(self, reef, core_data, input_v):
+    #     pred_core = self.run_Model(reef, input_v)
+    #     pred_core = pred_core.T
+    #     pred_core_w_noise = np.zeros((pred_core.shape[0], pred_core.shape[1]))
+    #     intervals = pred_core.shape[0]
+    #     for n in range(intervals):
+    #        pred_core_w_noise[n,:] = np.random.multinomial(1,pred_core[n],size=1)
+    #     pred_core_w_noise = pred_core_w_noise/1
+    #     z = np.zeros((intervals,self.communities+1))  
+    #     z = pred_core_w_noise * core_data
+    #     loss = np.log(z)
+    #     loss[loss == -inf] = 0
+    #     loss = np.sum(loss)
+    #     diff = self.diff_score(pred_core_w_noise,core_data, intervals)
+    #     loss = np.exp(loss)
+    #     return [loss, pred_core_w_noise, diff]
 
     def probabilisticLikelihood(self, reef, core_data, input_v):
-        sim_propn, sim_timelay = self.runModel(reef, input_v)
-        intervals = sim_propn.shape[0]
+        sim_t_propn, sim_d_propn, sim_timelay = self.runModel(reef, input_v)
+        intervals = sim_t_propn.shape[0]
         # # Uncomment if noisy synthetic data is required.
-        # self.NoiseToData(intervals,sim_propn)
-        log_core = np.log(sim_propn)
+        # self.NoiseToData(intervals,sim_t_propn)
+        log_core = np.log(sim_t_propn+0.0001)
         log_core[log_core == -inf] = 0
         z = log_core * core_data
         likelihood = np.sum(z)
-        diff = self.diff_score(sim_propn,core_data, intervals)
-        rmse = self.rmse(sim_propn, core_data)
-        return [likelihood, sim_propn, diff, rmse]
+        diff = self.diff_score(sim_t_propn,core_data, intervals)
+        # rmse = self.rmse(sim_t_propn, core_data)
+        return [likelihood, sim_t_propn, sim_d_propn.T, diff]
            
     def deterministicLikelihood(self, reef, core_data, input_v):
-        sim_data, sim_timelay = self.runModel(reef, input_v)
-        # sim_data = sim_data.T
-        intervals = sim_data.shape[0]
+        sim_t_data, sim_d_data, sim_timelay = self.runModel(reef, input_v)
+        # sim_t_data = sim_t_data.T
+        intervals = sim_t_data.shape[0]
         z = np.zeros((intervals,self.communities+1))    
         for n in range(intervals):
             idx_data = np.argmax(core_data[n,:])
-            idx_model = np.argmax(sim_data[n,:])
-            if ((sim_data[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
+            idx_model = np.argmax(sim_t_data[n,:])
+            if ((sim_t_data[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
                 z[n,idx_data] = 1
         same = np.count_nonzero(z)
         same = float(same)/intervals
         diff = 1-same
-        # rmse = self.rmse(sim_data, core_data)
+        # rmse = self.rmse(sim_t_data, core_data)
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
-        l1 = np.log(z)
-        l2 = l1
-        likelihood = np.exp(l2)
-        return [np.sum(likelihood), sim_data, diff]
+        likelihood = np.log(z)
+        # l1 = likelihood
+        # likelihood = np.exp(l1)
+        return [np.sum(likelihood), sim_t_data, sim_d_data.T, diff]
 
     def saveCore(self,reef,naccept):
         path = '%s/%s' % (self.filename, naccept)
@@ -190,20 +211,14 @@ class MCMC():
             os.makedirs(path)
         
         #     Initial settings     #
-        reef.core.initialSetting(size=(8,2.5), size2=(8,4.5), dpi=300, fname='%s/a_thres_%s_' % (path, naccept))
-        from matplotlib.cm import terrain, plasma
-        nbcolors = len(reef.core.coralH)+10
-        colors = terrain(np.linspace(0, 1.8, nbcolors))
-        nbcolors = len(reef.core.layTime)+3
-        colors2 = plasma(np.linspace(0, 1, nbcolors))
-        
+        reef.core.initialSetting(size=(8,2.5), size2=(8,4.5), dpi=300, fname='%s/a_thres_%s_' % (path, naccept))        
         #      Community population evolution    #
-        reef.plot.speciesDepth(colors=colors, size=(8,4), font=8, dpi=300, fname =('%s/b_popd_%s.png' % (path,naccept)))
-        reef.plot.speciesTime(colors=colors, size=(8,4), font=8, dpi=300,fname=('%s/c_popt_%s.png' % (path,naccept)))
+        reef.plot.speciesDepth(colors=self.colors, size=(8,4), font=8, dpi=300, fname =('%s/b_popd_%s.png' % (path,naccept)))
+        reef.plot.speciesTime(colors=self.colors, size=(8,4), font=8, dpi=300,fname=('%s/c_popt_%s.png' % (path,naccept)))
         reef.plot.accomodationTime(size=(8,4), font=8, dpi=300, fname =('%s/d_acct_%s.pdf' % (path,naccept)))
         
         #      Draw core      #
-        reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=300, 
+        reef.plot.drawCore(lwidth = 3, colsed=self.colors, coltime = self.colors2, size=(9,8), font=8, dpi=300, 
                            figname=('%s/e_core_%s' % (path, naccept)), filename=('%s/core_%s.csv' % (path, naccept)), sep='\t')
         return
 
@@ -216,11 +231,9 @@ class MCMC():
         return proposal
     
     def sampler(self):
-        data_size = self.core_data.shape[0]
         samples = self.samples
-        x_data = self.core_depths
-        y_data = self.core_data
-        data_vec = self.data_vec
+        data_vec_t = self.data_vec_t
+        data_vec_d = self.data_vec_d
 
         with file(('%s/description.txt' % (self.filename)),'a') as outfile:
             outfile.write('\nstep_m: {0}'.format(self.step_m))
@@ -241,8 +254,8 @@ class MCMC():
         pos_ay = np.zeros(samples)
         pos_m = np.zeros(samples)
         # Create space to store fx of all samples
-        pos_samples = np.zeros((samples, self.core_data.shape[0]))
-        
+        pos_samples_d = np.zeros((samples, self.data_vec_d.shape[0]))
+        pos_samples_t = np.zeros((samples, self.core_data.shape[0]))
         #      INITIAL PREDICTION       #
         sed1 = np.zeros(self.communities)
         sed2 = np.zeros(self.communities)
@@ -283,13 +296,13 @@ class MCMC():
 
         # Declare pyReef-Core and initialize
         reef = Model()
-
-        [likelihood, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
+        [likelihood, sim_pred_t, sim_pred_d, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
+        print '\tInitial likelihood:', likelihood
         pos_diff = np.full(samples,diff)
         pos_likl = np.full(samples, likelihood)
-        core_vec = self.convertCoreFormat(pred_data, self.communities)
-        pos_samples[0,:] = core_vec
-        print '\tInitial likelihood:', likelihood
+        core_vec = self.convertCoreFormat(sim_pred_d)
+        pos_samples_t[0,:] = self.convertCoreFormat(sim_pred_t)
+        pos_samples_d[0,:] = self.convertCoreFormat(sim_pred_d)
         self.saveCore(reef, 'initial')
 
         naccept = 0
@@ -300,36 +313,58 @@ class MCMC():
         #     pos_m[0], pos_ax[0], pos_ay[0], 
         #     pos_sed1[0,], pos_sed2[0,], pos_sed3[0,], pos_sed4[0,],
         #     pos_flow1[0,], pos_flow2[0,], pos_flow3[0,], pos_flow4[0,],
-        #     pos_diff[0],pos_likl[0], pos_samples[0,],pos_v[0,])
+        #     pos_diff[0],pos_likl[0], pos_samples_t[0,],pos_v[0,])
         
-        # print 'Begin sampling using MCMC random walk'
+        print 'Begin sampling using MCMC random walk'
+        ##########################################
+        # PLOT INITIAL PREDICTIONS AND PROPOSALS #
+        ##########################################
+        # Initial prediction - Depth 
         x_tick_labels = ['No growth','Shallow', 'Mod-deep', 'Deep', 'Sediment']
-        x_tick_values = [0,1,2,3,4]
+        x_tick_values = [-1,1,2,3,4]
         fig = plt.figure(figsize=(3,6))
         ax = fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
-        ax.plot(data_vec, x_data, label='Synthetic core', color='k')
-        ax.plot(core_vec, x_data, label='Initial predicted core')
+        ax.plot(data_vec_d, self.data_depths, label='Synthetic core', color='k')
+        ax.plot(core_vec, self.data_depths, label='Initial predicted core')
         ax.set_title("Initial Prediction", size=self.font+2)
         plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=self.font+1)
         ax.set_ylabel("Core depth [m]",size=self.font+1)
-        ax.set_ylim([0,np.amax(self.core_depths)])
+        ax.set_ylim([0,np.amax(self.data_depths)])
         ax.set_ylim(ax.get_ylim()[::-1])
         plt.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
-        fig.savefig('%s/begin.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
+        fig.savefig('%s/begin.png' % (self.filename), bbox_inches='tight',dpi=200,transparent=False)
         plt.clf()
-        
-        # ACCUMULATED FIGURE SET UP
-        final_fig = plt.figure(figsize=(3,6))
-        ax_append = final_fig.add_subplot(111)
-        ax_append.set_facecolor('#f2f2f3')
-        ax_append.plot(data_vec, x_data, label='Synthetic core', color='k')
-        ax_append.plot(core_vec, x_data)
-        ax_append.set_title("Accepted Proposals", size=self.font+2)
+        # Accumulating figure of all proposals - Depth
+        finalfig_d = plt.figure(figsize=(3,6))
+        axprop_d = finalfig_d.add_subplot(111)
+        axprop_d.plot(data_vec_d, self.data_depths, label='Synthetic core', color='k')
+        axprop_d.plot(core_vec, self.data_depths)
+        axprop_d.set_title("Accepted Proposals", size=self.font+2)
         plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=self.font+1)
-        ax_append.set_ylabel("Depth [m]",size=self.font+1)
-        ax_append.set_ylim([0,np.amax(self.core_depths)])
-        ax_append.set_ylim(ax_append.get_ylim()[::-1])
+        axprop_d.set_ylabel("Depth [m]",size=self.font+1)
+        axprop_d.set_ylim([0,np.amax(self.data_depths)])
+        axprop_d.set_ylim(axprop_d.get_ylim()[::-1])
+
+        # Initial prediction - Time
+        reef.plot.speciesTime(colors=self.colors, size=(10,5), font=self.font, dpi=200, fname=('%s/begin.png' % (self.filename)))
+
+        # # Accumulating figure of all proposals - time
+        finalfig_t, axprop_t = plt.subplots(1, figsize=(10,5))
+        axprop_t.set_facecolor('#f2f2f3')
+        timecarb,pop,names = reef.plot.getTimePlotParameters()
+        for x in range(len(pop)):
+            axprop_t.plot(timecarb, pop[x,:],linewidth=self.width)
+            axprop_t.plot(self.true_timeCarb, self.true_pop[x,:], c=self.colors[x], linewidth=self.width, color='k')
+        axprop_t.grid()
+        axprop_t.set_ylabel('Population',size=self.font+2)
+        axprop_t.set_xlabel('Simulation time [y]',size=self.font+2)
+        axprop_t.set_ylim(0., int(self.true_pop.max())+1)
+        axprop_t.set_xlim(0., self.true_timeCarb.max())
+        ttl = axprop_t.title
+        ttl.set_position([.5, 1.05])
+        axprop_t.set_title('Evolution of assemblage populations with time',size=self.font+3)
+
 
 
         for i in range(samples - 1):
@@ -438,7 +473,7 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            [likelihood_proposal, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
+            [likelihood_proposal, sim_pred_t, sim_pred_d, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
@@ -482,11 +517,17 @@ class MCMC():
                 pos_ay[i + 1] = cm_ay
                 pos_m[i + 1] = m
                 pos_v[i + 1,] = v_proposal
-                pos_samples[i + 1,] = self.convertCoreFormat(pred_data, self.communities)
+                pos_samples_t[i + 1,] = self.convertCoreFormat(sim_pred_t)
+                pos_samples_d[i + 1,] = self.convertCoreFormat(sim_pred_d)
                 pos_diff[i + 1,] = diff
                 pos_likl[i + 1,] = likelihood
                 
-                ax_append.plot(pos_samples[i + 1,],x_data, label=None)
+                core_vec = self.convertCoreFormat(sim_pred_d)
+                axprop_d.plot(core_vec,self.data_depths, label=None)  
+                timecarb,pop,names = reef.plot.getTimePlotParameters()
+                for x in range(len(pop)):
+                    axprop_t.plot(timecarb[::-1], pop[x,:],linewidth=self.width)
+        
                 # Uncomment if you want to see posterior as the simulations runs
                 # saveParameters.saveParameters(self.filename, self.sedsim, self.flowsim, i+1, 
                 #     pos_m[i+1], pos_ax[i+1], pos_ay[i+1], 
@@ -496,7 +537,8 @@ class MCMC():
 
             else: #reject
                 pos_v[i + 1,] = pos_v[i,]
-                pos_samples[i + 1,] = pos_samples[i,]
+                pos_samples_t[i + 1,] = pos_samples_t[i,]
+                pos_samples_d[i + 1,] = pos_samples_d[i,]
                 pos_diff[i + 1,] = pos_diff[i,]
                 pos_likl[i + 1,] = pos_likl[i,]
                 print 'REJECTED\nLikelihood:',likelihood,'and difference score:', pos_diff[i,]
@@ -534,13 +576,16 @@ class MCMC():
         print len(count_list) / (samples * 0.01), '% was accepted'
         accept_ratio = accepted_count / (samples * 1.0) * 100
 
-        lgd = ax_append.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
-        final_fig.savefig('%s/proposals.png'% (self.filename), extra_artists = (lgd,),bbox_inches='tight',dpi=300,transparent=False)
+        # lgd = axprop_d.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
+        finalfig_d.savefig('%s/proposals_d.png'% (self.filename),bbox_inches='tight',dpi=200,transparent=False)
         plt.clf()
 
-        return (pos_v, pos_diff, pos_likl, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
+        finalfig_t.savefig('%s/proposals_t.png'% (self.filename),bbox_inches='tight',dpi=200,transparent=False)
+        plt.clf()
+
+        return (pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
         	pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
-        	x_data, accept_ratio, accepted_count, data_vec)
+        	self.data_depths, accept_ratio, accepted_count, data_vec_t)
 
 #####################################################################
 
@@ -548,22 +593,21 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 2 #input('Enter number of samples: ')
+    samples= 10 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
     description = 'New likelihood funciton, only isolating 1 parameter'
     assemblage = 2
     xmlinput = 'input_synth.xml'
-    synth_vec = 'data/synth_core_vec.txt'
-    core_depths, data_vec = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
-    synth_data = 'data/data_timestructure_08.txt'
-    core_data = np.loadtxt(synth_data, usecols=(1,2,3,4))
-    core_time = np.loadtxt(synth_data, usecols=(1))
-    data_depth=0
-    # synth_data = 'data/cutpoint_vec_test.txt'
-    # data_depth, core_data = np.genfromtxt(synth_data, usecols=(0,1), unpack=True)
+    data_depths, data_vec_d = np.genfromtxt('data/synthdata_d_vec.txt', usecols=(0,1), unpack=True)
+    synth_data = 'data/synthdata_t_prop_08_2.txt'
+    core_data = np.loadtxt(synth_data, usecols=(1,2,3,4))  
+    synth_vec = 'data/synthdata_t_vec_08_2.txt'
+    data_times, data_vec_t = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True)
+    true_pop = np.loadtxt('data/true_pop.txt', usecols=(0,1,2)) 
+    true_pop = true_pop.T
+    true_timeCarb = np.loadtxt('data/true_timecarb.txt', usecols=0)
     nCommunities = 3
     simtime = 8500
-    timestep = np.arange(0,simtime+1,50)
     """ Option to visualise the initial parameters [0] and visualise the cores [1] for each iteration of MCMC. 
     Mainly useful for runModel.py and slows down simulation in MCMC sampler. """
     vis = [False, False]
@@ -576,6 +620,9 @@ def main():
     max_a = -0.15
     min_m = 0
     max_m = 0.15
+    true_m = 0.08
+    true_ax = -0.01
+    true_ay = -0.03
 
     step_sed = 0.01 * abs(sedlim[0]-sedlim[1])
     step_flow = 0.01 * abs(flowlim[0]-flowlim[1])
@@ -599,12 +646,14 @@ def main():
             outfile.write('\nXML input: {0}'.format(xmlinput))
             outfile.write('\nData file: {0}'.format(synth_vec))
 
-    mcmc = MCMC(simtime, samples, nCommunities, data_depth, core_data, core_depths, data_vec, timestep,  filename, xmlinput, 
-                sedsim, sedlim, flowsim, flowlim, vis, min_a, max_a, min_m, max_m, assemblage, step_sed, step_flow, step_m, step_a)
+    mcmc = MCMC(filename, xmlinput, simtime, samples, nCommunities, sedsim, sedlim, flowsim, flowlim, vis,
+        data_depths, data_vec_d, data_times, data_vec_t, core_data, true_pop, true_timeCarb,
+        min_m, max_m, true_m, step_m, min_a, max_a, true_ax, true_ay ,step_a, step_sed, step_flow, assemblage)
 
-    [pos_v, pos_diff, pos_likl, pos_samples, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
-    pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, x_data,
-    accept_ratio, accepted_count, data_vec] = mcmc.sampler()
+
+    [pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
+    pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, data_depths,
+    accept_ratio, accepted_count, data_vec_t] = mcmc.sampler()
     print 'Successfully sampled'
     
     burnin = 0.1 * samples  # use post burn in samples
@@ -653,13 +702,14 @@ def main():
     if not os.path.isfile(('%s/pos_burnin_proposal.csv' % (filename))):
         np.savetxt("%s/pos_burnin_proposal.csv" % (filename), pos_v, delimiter=',')
 
-    plotResults.plotPosCore(pos_samples,core_depths, data_vec, x_data, mcmc.font, mcmc.width, filename)
+    plotResults.plotPosCore(pos_samples_d,data_depths, data_vec_d, data_times, mcmc.font, mcmc.width, filename)
+    
     plotResults.boxPlots(nCommunities, pos_v, sedsim, flowsim, mcmc.font,mcmc.width,filename)    
     plotResults.plotLiklAndDiff(pos_likl, pos_diff, samples, mcmc.font, filename)
     plotResults.plotParameters(mcmc.filename, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
         pos_m, pos_ax, pos_ay, mcmc.true_m, mcmc.true_ax, mcmc.true_ay, 
-        pos_sed1, pos_sed2, pos_sed3, pos_sed4, mcmc.initial_sed,
-        pos_flow1, pos_flow2, pos_flow3, pos_flow4, mcmc.initial_flow)
+        pos_sed1, pos_sed2, pos_sed3, pos_sed4, mcmc.true_sed,
+        pos_flow1, pos_flow2, pos_flow3, pos_flow4, mcmc.true_flow)
     print 'Finished simulations'
 
 if __name__ == "__main__": main()
