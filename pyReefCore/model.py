@@ -47,9 +47,6 @@ class Model(object):
 
         # Initialise pre-processing functions
         self.enviforcing = preProc.preProc()
-        # Optimising algorithm score
-        self.score =0.
-        self.run_count=0
         # Optimised parameters
         self.opt_Sed = []
         self.opt_Flow = []
@@ -69,7 +66,7 @@ class Model(object):
         self.tCoral = self.tNow
         self.tLayer = self.tNow + self.input.laytime
 
-        ################### Reassign input parameters with input vector values ###################
+        # Reassign .xml input parameters with input vector values
         self.initial_sed = self.input.__dict__["enviSed"]
         self.initial_flow = self.input.__dict__["enviFlow"]
 
@@ -78,15 +75,10 @@ class Model(object):
                 self.input.__dict__["enviSed"] = self.opt_Sed
                 # envsd = self.input.__dict__["enviSed"]
                 # print 'Sediment Function:', envsd
-                # print 'envsd shape:', envsd.shape
                 self.input.__dict__["communityMatrix"] = self.opt_cMatrix
                 self.input.__dict__["malthusParam"] = self.opt_malthusParam
             elif (flowsim == True) and (sedsim == False):
                 self.input.__dict__["enviFlow"] = self.opt_Flow
-                # envwf = self.input.__dict__["enviFlow"]
-                # print 'envwf:', envwf
-                # envsd = self.input.__dict__["enviSed"]
-                # print 'Sediment Function:', envsd
                 self.input.__dict__["communityMatrix"] = self.opt_cMatrix
                 self.input.__dict__["malthusParam"] = self.opt_malthusParam
             elif (sedsim == True) and (flowsim == True):
@@ -98,9 +90,6 @@ class Model(object):
                 self.input.__dict__["malthusParam"] = self.opt_malthusParam
             cmmat= self.input.__dict__["communityMatrix"]
             mtpar= self.input.__dict__["malthusParam"]
-            # print 'Community matrix:', cmmat
-            # print 'malthus:', mtpar
-        ##########################################################################################
 
         # Seed the random number generator consistently on all nodes
         seed = None
@@ -249,8 +238,6 @@ class Model(object):
                 timeVerbose = self.tNow+showtime
                 # print 'tNow = %s [yr]' %self.tNow
 
-        #print "Did not return from this", "...I have my doubts"
-
         # Update plotting parameters
         self.plot.pop = self.coral.population
         self.plot.timeCarb = self.coral.iterationTime
@@ -272,8 +259,7 @@ class Model(object):
 
         return 1
 
-    def convert_vector(self, communities, input_vector, sedsim, flowsim, verbose=False):
-        # print 'input vector: ', input_vector
+    def convertVector(self, communities, input_vector, sedsim, flowsim, verbose=False):
         new_shape = communities*4
         if (sedsim == True) and (flowsim == False):
             self.opt_Sed = input_vector[0:new_shape].reshape(4,communities)
@@ -332,98 +318,76 @@ class Model(object):
         
         return 
 
-    def convert_core(self, communities, output_core, core_depths):
-        # print 'output_core', output_core
-        predicted_core = np.zeros(core_depths.size)    
-        if (communities == 3): 
-            comm_1 = output_core[0,:].flatten()
-            comm_2 = output_core[1,:].flatten()
-            comm_3 = output_core[2,:].flatten()
-            sed = output_core[3,:].flatten()
-            comms_at_depth = np.zeros((core_depths.size, communities+1))
-            for i in range(0,core_depths.size):
-                comms_at_depth[i,0] = comm_1[i]
-                comms_at_depth[i,1] = comm_2[i]
-                comms_at_depth[i,2] =comm_3[i]
-                comms_at_depth[i,3] = sed[i]
-            for n in range(0,core_depths.size):
-                index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
-                # print 'no:', n, 'index',index,'value',value
-                if index == 0 and value != 0:
-                    predicted_core[n] = 1
-                elif index == 1:
-                    predicted_core[n] = 2
-                elif index == 2:
-                    predicted_core[n] = 3
-                elif index == 3:
-                    predicted_core[n] = 4
-                else:
-                    predicted_core[n] = 0
-            # print 'predicted_core', predicted_core
-        
-        elif (communities == 6): # and (self.opt_malthusParam != []):
-            comm_1 = output_core[0,:].flatten()
-            comm_2 = output_core[1,:].flatten()
-            comm_3 = output_core[2,:].flatten()
-            comm_4 = output_core[3,:].flatten()
-            comm_5 = output_core[4,:].flatten()
-            comm_6 = output_core[5,:].flatten()
-            sed = output_core[6,:].flatten()
-            comms_at_depth = np.zeros((core_depths.size, communities+1)) #initialise array 
+    """
+    Function to convert the core to a 1D vector of discrete numbers to represent
+    the dominant assemblage at each depth interval. 
+    It is currently a legacy function used in the gaussian version of this code.
+    """
+    
+    # def convert_core(self, communities, output_core, core_depths):
+    #     predicted_core = np.zeros(core_depths.size)    
+    #     if (communities == 3): 
+    #         comm_1 = output_core[0,:].flatten()
+    #         comm_2 = output_core[1,:].flatten()
+    #         comm_3 = output_core[2,:].flatten()
+    #         sed = output_core[3,:].flatten()
+    #         comms_at_depth = np.zeros((core_depths.size, communities+1))
+    #         for i in range(0,core_depths.size):
+    #             comms_at_depth[i,0] = comm_1[i]
+    #             comms_at_depth[i,1] = comm_2[i]
+    #             comms_at_depth[i,2] =comm_3[i]
+    #             comms_at_depth[i,3] = sed[i]
+    #         for n in range(0,core_depths.size):
+    #             index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
+    #             if index == 0 and value != 0:
+    #                 predicted_core[n] = 1
+    #             elif index == 1:
+    #                 predicted_core[n] = 2
+    #             elif index == 2:
+    #                 predicted_core[n] = 3
+    #             elif index == 3:
+    #                 predicted_core[n] = 4
+    #             else:
+    #                 predicted_core[n] = 0
+    #     elif (communities == 6): # and (self.opt_malthusParam != []):
+    #         comm_1 = output_core[0,:].flatten()
+    #         comm_2 = output_core[1,:].flatten()
+    #         comm_3 = output_core[2,:].flatten()
+    #         comm_4 = output_core[3,:].flatten()
+    #         comm_5 = output_core[4,:].flatten()
+    #         comm_6 = output_core[5,:].flatten()
+    #         sed = output_core[6,:].flatten()
+    #         comms_at_depth = np.zeros((core_depths.size, communities+1)) #initialise array 
             
-            for i in range(0,core_depths.size):
-                comms_at_depth[i,0] = comm_1[i]
-                comms_at_depth[i,1] = comm_2[i]
-                comms_at_depth[i,2] =comm_3[i]
-                comms_at_depth[i,3] = comm_4[i]
-                comms_at_depth[i,4] = comm_5[i]
-                comms_at_depth[i,5] = comm_6[i]
-                comms_at_depth[i,6] = sed[i]
-            # print 'Final comms_at_depth', comms_at_depth
+    #         for i in range(0,core_depths.size):
+    #             comms_at_depth[i,0] = comm_1[i]
+    #             comms_at_depth[i,1] = comm_2[i]
+    #             comms_at_depth[i,2] =comm_3[i]
+    #             comms_at_depth[i,3] = comm_4[i]
+    #             comms_at_depth[i,4] = comm_5[i]
+    #             comms_at_depth[i,5] = comm_6[i]
+    #             comms_at_depth[i,6] = sed[i]
             
-            for n in range(0,core_depths.size):
-                index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
-                # print 'no:', n, 'index',index,'value',value
-                if index == 0 and value != 0:
-                    predicted_core[n] = 1
-                elif index == 1:
-                    predicted_core[n] = 2
-                elif index == 2:
-                    predicted_core[n] = 3
-                elif index == 6:
-                    predicted_core[n] = 4
-                elif index == 3:
-                    predicted_core[n] = 5
-                elif index == 4:
-                    predicted_core[n] = 6
-                elif index == 5:
-                    predicted_core[n] = 7
-                else:
-                    predicted_core[n] = 0
+    #         for n in range(0,core_depths.size):
+    #             index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
+    #             if index == 0 and value != 0:
+    #                 predicted_core[n] = 1
+    #             elif index == 1:
+    #                 predicted_core[n] = 2
+    #             elif index == 2:
+    #                 predicted_core[n] = 3
+    #             elif index == 6:
+    #                 predicted_core[n] = 4
+    #             elif index == 3:
+    #                 predicted_core[n] = 5
+    #             elif index == 4:
+    #                 predicted_core[n] = 6
+    #             elif index == 5:
+    #                 predicted_core[n] = 7
+    #             else:
+    #                 predicted_core[n] = 0
+    #     else:
+    #         print 'No predicted core made'
 
-        # elif (communities == 6) and (self.opt_malthusParam == []):
-        #      for n in range(0,core_depths.size):
-        #         index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
-        #         # print 'no:', n, 'index',index,'value',value
-        #         if index == 0 and value != 0:
-        #             predicted_core[n] = 0.143
-        #         elif index == 1:
-        #             predicted_core[n] = 0.286
-        #         elif index == 2:
-        #             predicted_core[n] = 0.429
-        #         elif index == 3:
-        #             predicted_core[n] = 0.571
-        #         elif index == 4:
-        #             predicted_core[n] = 0.714
-        #         elif index == 5:
-        #             predicted_core[n] = 0.857
-        #         elif index == 6:
-        #             predicted_core[n] = 1.0
-        #         else:
-        #             predicted_core[n] = 0
-        #     print 'predicted_core', predicted_core
-        else:
-            print 'No predicted core made'
-
-        return predicted_core
+    #     return predicted_core
     

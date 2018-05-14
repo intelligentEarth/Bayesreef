@@ -1,0 +1,6 @@
+Activity log
+Wednesday, May 9
+
+After a meeting with Sally, Rohit and Danial, we decided to create a new likelihood function based on time structure rather than depth structure of cores. 
+We will re-program the 'deterministic' multi-nomial likelihood so that it compares cores based on the time-structure of cores, and simultaneously work on
+a new likelihood function that does not assume independent observations (intervals) in a core. 

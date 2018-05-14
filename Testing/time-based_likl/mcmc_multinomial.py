@@ -52,7 +52,7 @@ class MCMC():
         self.step_a =step_a #0.002 # <1%
         self.step_sed = step_sed #0.0001 # 2%
         self.step_flow = step_flow #0.0015 # 0.05%
-        self.true_m = 0.1
+        self.true_m = 0.08
         self.true_ax = -0.01
         self.true_ay = -0.03
         self.assemblage = assemblage
@@ -64,20 +64,18 @@ class MCMC():
     def runModel(self, reef, input_vector):
         reef.convertVector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
         self.initial_sed, self.initial_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
-        if self.vis[0] == True:
-            reef.core.initialSetting(size=(8,2.5), size2=(8,3.5)) # View initial parameters
+        # if self.vis[0] == True:
+            # reef.core.initialSetting(size=(8,2.5), size2=(8,3.5)) # View initial parameters
         reef.run_to_time(self.simtime,showtime=100.)
-        if self.vis[1] == True:
-            from matplotlib.cm import terrain, plasma
-            nbcolors = len(reef.core.coralH)+10
-            colors = terrain(np.linspace(0, 1.8, nbcolors))
-            nbcolors = len(reef.core.layTime)+3
-            colors2 = plasma(np.linspace(0, 1, nbcolors))
-            reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=300)
-        output_core = reef.plot.convertDepthStructure(self.communities, self.core_depths) #modelPlot.py
-        # predicted_core = reef.convert_core(self.communities, output_core, self.core_depths) #model.py
-        # return predicted_core
-        return output_core
+        # if self.vis[1] == True:
+        #     from matplotlib.cm import terrain, plasma
+        #     nbcolors = len(reef.core.coralH)+10
+        #     colors = terrain(np.linspace(0, 1.8, nbcolors))
+        #     nbcolors = len(reef.core.layTime)+3
+        #     colors2 = plasma(np.linspace(0, 1, nbcolors))
+        #     reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=300)
+        sim_output, sim_timelay = reef.plot.convertTimeStructure() #modelPlot.py
+        return sim_output, sim_timelay
 
     def convertCoreFormat(self, core, communities):
         vec = np.zeros(core.shape[0])
@@ -152,42 +150,39 @@ class MCMC():
         	continue to second cut-point
         """
 
-
-
-    def probabilisticLikelihood(self, reef, synth_data, input_v):
-            sim_propn = self.runModel(reef, input_v)
-            sim_propn = sim_propn.T
-            intervals = sim_propn.shape[0]
-
-            # # Uncomment if noisy synthetic data is required.
-            # self.NoiseToData(intervals,sim_propn)
-
-            log_core = np.log(sim_propn)
-            log_core[log_core == -inf] = 0
-            z = log_core * synth_data
-            likelihood = np.sum(z)
-            diff = self.diffScore(sim_propn,synth_data, intervals)
-            # rmse = self.rmse(sim_propn, self.synth_data)
-            return [likelihood, sim_propn, diff]
+    def probabilisticLikelihood(self, reef, core_data, input_v):
+        sim_propn, sim_timelay = self.runModel(reef, input_v)
+        intervals = sim_propn.shape[0]
+        # # Uncomment if noisy synthetic data is required.
+        # self.NoiseToData(intervals,sim_propn)
+        log_core = np.log(sim_propn)
+        log_core[log_core == -inf] = 0
+        z = log_core * core_data
+        likelihood = np.sum(z)
+        diff = self.diff_score(sim_propn,core_data, intervals)
+        rmse = self.rmse(sim_propn, core_data)
+        return [likelihood, sim_propn, diff, rmse]
            
-    def deterministicLikelihood(self, reef, synth_data, input_v):
-        sim_data = self.runModel(reef, input_v)
-        sim_data = sim_data.T
+    def deterministicLikelihood(self, reef, core_data, input_v):
+        sim_data, sim_timelay = self.runModel(reef, input_v)
+        # sim_data = sim_data.T
         intervals = sim_data.shape[0]
         z = np.zeros((intervals,self.communities+1))    
         for n in range(intervals):
-            idx_data = np.argmax(synth_data[n,:])
+            idx_data = np.argmax(core_data[n,:])
             idx_model = np.argmax(sim_data[n,:])
             if ((sim_data[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
                 z[n,idx_data] = 1
         same = np.count_nonzero(z)
         same = float(same)/intervals
         diff = 1-same
-        # rmse = self.rmse(sim_data, synth_data)
+        # rmse = self.rmse(sim_data, core_data)
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
-        likelihood = np.log(z)   
-        return [np.sum(likelihood), pred_core, diff]
+        l1 = np.log(z)
+        l2 = l1
+        likelihood = np.exp(l2)
+        return [np.sum(likelihood), sim_data, diff]
 
     def saveCore(self,reef,naccept):
         path = '%s/%s' % (self.filename, naccept)
@@ -289,7 +284,7 @@ class MCMC():
         # Declare pyReef-Core and initialize
         reef = Model()
 
-        [likelihood, pred_data, diff] = self.probabilisticLikelihood(reef, self.core_data, v_proposal)
+        [likelihood, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
         pos_diff = np.full(samples,diff)
         pos_likl = np.full(samples, likelihood)
         core_vec = self.convertCoreFormat(pred_data, self.communities)
@@ -443,7 +438,7 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            [likelihood_proposal, pred_data, diff] = self.probabilisticLikelihood(reef, self.core_data, v_proposal)
+            [likelihood_proposal, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
@@ -560,8 +555,9 @@ def main():
     xmlinput = 'input_synth.xml'
     synth_vec = 'data/synth_core_vec.txt'
     core_depths, data_vec = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
-    synth_prop = 'data/synth_core_prop.txt'
-    core_data = np.loadtxt(synth_prop, usecols=(1,2,3,4))
+    synth_data = 'data/data_timestructure_08.txt'
+    core_data = np.loadtxt(synth_data, usecols=(1,2,3,4))
+    core_time = np.loadtxt(synth_data, usecols=(1))
     data_depth=0
     # synth_data = 'data/cutpoint_vec_test.txt'
     # data_depth, core_data = np.genfromtxt(synth_data, usecols=(0,1), unpack=True)

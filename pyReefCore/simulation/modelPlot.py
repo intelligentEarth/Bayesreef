@@ -30,7 +30,6 @@ class modelPlot():
         """
         Constructor.
         """
-
         self.names = np.empty(input.speciesNb+1, dtype="S14")
         self.names[:input.speciesNb] = input.speciesName
         self.names[-1] = 'Sediment'
@@ -203,7 +202,7 @@ class modelPlot():
         plt.close()
         return
     
-    def write_core(self, communities):
+    def writeCore(self, communities):
         # write to a text file a column of depth intervals and the assemblage at each depth interval 
         p2 = np.zeros((self.sedH.shape))
         ids = np.where(self.depth[:-1]>0)[0]
@@ -237,14 +236,13 @@ class modelPlot():
                     id_prev=idx
         return p2, output_core, core_depths
 
-    def core_timetodepth(self, communities, core_depths):
+    def convertDepthStructure(self, communities, core_depths):
         ids = np.where(self.depth[:-1]>0)[0]
         p2 = np.zeros((self.sedH.shape))
         p2[:,ids] = self.sedH[:,ids]/self.depth[ids]
 
         bottom = self.surf + self.depth[:-1].sum()
         d = bottom - np.cumsum(self.depth[:-1])
-        # print 'depth [...', d[-2:], ']'
 
         counter = 0
         max_depth=np.amax(core_depths)
@@ -254,44 +252,36 @@ class modelPlot():
         id_prev = 999
         idx = 0
 
-
         for i in range (0,len(core_depths)):
             if not ((np.sum(p2[:,i]) == 0) and (depth_incrementor == -0.1)): 
             # as long as there is growth and the core is not filled
-            # if not ((np.sum(p2[0:communities,i]) == 0) and (p2[communities,i] == 1)):
                 idx = (np.abs(d-depth_incrementor)).argmin()
-                # print 'idx:', idx
                 if not ((idx == d.size-1) and (idx == id_prev)):
-                    # print i, 'of ', len(core_depths)
                     # as long as idx has a corresponding value that is not the end of the core
-                    # print 'current depth_incrementor', depth_incrementor, 'm'
                     output_core[:,counter] = p2[:,idx]
-                    # print 'p2[:,idx]    output_core[:,counter]\n', output_core[:,counter]
                     counter += 1
-                    # print 'counter: ', counter
                     depth_incrementor -= depth_increment
-                    # print 'next depth', depth_incrementor, 'm \n\n'
                     id_prev=idx
         return output_core
-    # def prepare_core_for_ABC(self):
-    #     predicted_core = np.zeros(self.sedH.shape)
-    #     p1 = self.sedH[:,:-1]
-    #     ids = np.where(self.depth[:-1]>0)[0]
-    #     p2 = np.zeros((self.sedH.shape))
-    #     p3 = np.zeros((self.sedH.shape))
-    #     p2[:,ids] = self.sedH[:,ids]/self.depth[ids]
-    #     p3[:,ids] = np.cumsum(self.sedH[:,ids]/self.depth[ids],axis=0)
-    #     bottom = self.surf + self.depth[:-1].sum()
-    #     d = bottom - np.cumsum(self.depth[:-1])
-    #     facies = np.argmax(p1, axis=0) #facies doesn't differentiate 0 coral from no deposition (0)
-    #     predicted_core = p2  # p2 indicates depth structure, p2 [:,ids] doesn't.
-    #     return predicted_core
+
+    def convertTimeStructure(self):
+        ids = np.where(self.depth[:-1]>0)[0] #ids are all depth intervals where growth is continuous, before it stops
+        propn_asmb_time = np.zeros((self.sedH.shape)) #proportion of each coral assemblage
+        propn_asmb_time[:,ids] = self.sedH[:,ids]/self.depth[ids]
+        # print 'propn_asmb_time', propn_asmb_time.T[:40,:]
+        # print 'timelay shape', self.timeLay.shape
+        # print 'self.pop', self.pop.shape, self.pop[1:40,:]
+        # print 'self.depth', self.depth.size, self.depth #171
+        # print 'accspace', self.accspace.shape, self.accspace #341
+        # print 'timlay', self.timeLay.shape, self.timeLay #171
+        # print 'surf', self.surf.shape, self.surf
+        # # print 'sedH', self.sedH.shape, self.sedH #4*171
+        return propn_asmb_time.T, self.timeLay
 
     def drawCore(self, depthext = None, thext = None, propext = [0.,1.], lwidth = 3,
                  colsed=None, coltime=None, size=(8,10), font=8, dpi=80, figname=None,
                  filename = None, sep = '\t'):
-        """
-        Plot core evolution
+        """Plot core evolution
 
         Parameters
         ----------
@@ -338,17 +328,9 @@ class modelPlot():
         p3 = np.zeros((self.sedH.shape))
 
         p2[:,ids] = self.sedH[:,ids]/self.depth[ids]
-        # print 'p2[:,ids]',p2[:,ids]
-        # print 'p2,',p2
-        # print'p2.shape', p2.shape
-        # print 'p3[:,ids]',p3[:,ids]
-        # print 'p3,',p3
-        # print'p3.shape', p3.shape
         p3[:,ids] = np.cumsum(self.sedH[:,ids]/self.depth[ids],axis=0) #
         bottom = self.surf + self.depth[:-1].sum()
         d = bottom - np.cumsum(self.depth[:-1])
-        # print 'depth',d
-        # print 'depth.shape', d.shape 
         facies = np.argmax(p1, axis=0)
         if thext == None:
             thext = [0.,p1.max()]
