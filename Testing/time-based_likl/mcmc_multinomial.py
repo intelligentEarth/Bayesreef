@@ -299,7 +299,7 @@ class MCMC():
 
         # Declare pyReef-Core and initialize
         reef = Model()
-        [likelihood, sim_pred_t, sim_pred_d, diff] = self.probabilisticLikelihood(reef, core_data, v_proposal)
+        [likelihood, sim_pred_t, sim_pred_d, diff] = self.deterministicLikelihood(reef, core_data, v_proposal)
         print '\tInitial likelihood:', likelihood
         pos_diff = np.full(samples,diff)
         pos_likl = np.full(samples, likelihood)
@@ -466,7 +466,7 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            [likelihood_proposal, sim_pred_t, sim_pred_d, diff] = self.probabilisticLikelihood(reef, core_data, v_proposal)
+            [likelihood_proposal, sim_pred_t, sim_pred_d, diff] = self.deterministicLikelihood(reef, core_data, v_proposal)
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
@@ -586,9 +586,9 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 10 #input('Enter number of samples: ')
+    samples= 100000 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
-    description = 'time-based likelihood function.'
+    description = 'time-based likelihood function, self.deterministicLikelihood'
     assemblage = 2
     xmlinput = 'input_synth.xml'
     data_depths, data_vec_d = np.genfromtxt('data/synthdata_d_vec.txt', usecols=(0,1), unpack=True)

@@ -187,7 +187,7 @@ class MCMC():
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
         likelihood = np.log(z)   
-        return [np.sum(likelihood), pred_core, diff]
+        return [np.sum(likelihood), sim_data, diff]
 
     def saveCore(self,reef,naccept):
         path = '%s/%s' % (self.filename, naccept)
@@ -289,7 +289,7 @@ class MCMC():
         # Declare pyReef-Core and initialize
         reef = Model()
 
-        [likelihood, pred_data, diff] = self.probabilisticLikelihood(reef, self.core_data, v_proposal)
+        [likelihood, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
         pos_diff = np.full(samples,diff)
         pos_likl = np.full(samples, likelihood)
         core_vec = self.convertCoreFormat(pred_data, self.communities)
@@ -443,7 +443,7 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            [likelihood_proposal, pred_data, diff] = self.probabilisticLikelihood(reef, self.core_data, v_proposal)
+            [likelihood_proposal, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
@@ -553,9 +553,9 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 2 #input('Enter number of samples: ')
+    samples= 100000 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
-    description = 'New likelihood funciton, only isolating 1 parameter'
+    description = 'depth-based likelihood function, self.deterministicLikelihood'
     assemblage = 2
     xmlinput = 'input_synth.xml'
     synth_vec = 'data/synth_core_vec.txt'

@@ -80,11 +80,11 @@ filename = 'input_synth_test.xml'
 reef.load_xml(filename, False, False)
 
 run_nb =0
-while os.path.exists('run-%s' % (run_nb)):
+while os.path.exists('model-%s' % (run_nb)):
       run_nb+=1
 
-if not os.path.exists('run-%s' % (run_nb)):
-    os.makedirs('run-%s' % (run_nb))
+if not os.path.exists('model-%s' % (run_nb)):
+    os.makedirs('model-%s' % (run_nb))
 
 
 # Visualise the initial conditions of your model run can be done using the following command:
@@ -173,7 +173,7 @@ def gen_find(filepat,top):
             yield os.path.join(path,name)
 src = os.getcwd()
 print src
-dst = '%s/run-%s' % (src,run_nb)
+dst = '%s/model-%s' % (src,run_nb)
 
 shutil.copyfile(src+'/'+filename, dst+'/input-%s.xml' % (run_nb))
 
