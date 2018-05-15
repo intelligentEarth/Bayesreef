@@ -259,32 +259,48 @@ class MCMC():
         # Create space to store fx of all samples
         pos_samples_d = np.zeros((samples, data_vec_d.shape[0]))
         pos_samples_t = np.zeros((samples, core_data.shape[0]))
-        #      INITIAL PREDICTION       #
-        sed1 = np.zeros(communities)
-        sed2 = np.zeros(communities)
-        sed3 = np.zeros(communities)
-        sed4 = np.zeros(communities)
-        if self.sedsim == True:
-            for s in range(communities):
-                sed1[s] = pos_sed1[0,s] = np.random.uniform(self.sedlim[0],self.sedlim[1])
-                sed2[s] = pos_sed2[0,s] = np.random.uniform(sed1[s],self.sedlim[1])
-                sed3[s] = pos_sed3[0,s] = np.random.uniform(sed2[s],self.sedlim[1])
-                sed4[s] = pos_sed4[0,s] = np.random.uniform(sed3[s],self.sedlim[1])
-
-        flow1 = np.zeros(communities)
-        flow2 = np.zeros(communities)
-        flow3 = np.zeros(communities)
-        flow4 = np.zeros(communities)
-        if self.flowsim == True:
-            for s in range(communities):
-                #     relaxed constraints 
-                flow1[s] = pos_flow1[0,s] = np.random.uniform(self.flowlim[0],self.flowlim[1])
-                flow2[s] = pos_flow2[0,s] = np.random.uniform(flow1[s],self.flowlim[1])
-                flow3[s] = pos_flow3[0,s] = np.random.uniform(flow2[s],self.flowlim[1])
-                flow4[s] = pos_flow4[0,s] = np.random.uniform(flow3[s],self.flowlim[1])
         
-        cm_ax = pos_ax[0] = np.random.uniform(self.min_a,self.max_a)
-        cm_ay = pos_ay[0] = np.random.uniform(self.min_a,self.max_a)
+
+        #      INITIAL PREDICTION       #
+            # sed1 = np.zeros(communities)
+            # sed2 = np.zeros(communities)
+            # sed3 = np.zeros(communities)
+            # sed4 = np.zeros(communities)
+            # if self.sedsim == True:
+            #     for s in range(communities):
+            #         sed1[s] = pos_sed1[0,s] = np.random.uniform(self.sedlim[0],self.sedlim[1])
+            #         sed2[s] = pos_sed2[0,s] = np.random.uniform(sed1[s],self.sedlim[1])
+            #         sed3[s] = pos_sed3[0,s] = np.random.uniform(sed2[s],self.sedlim[1])
+            #         sed4[s] = pos_sed4[0,s] = np.random.uniform(sed3[s],self.sedlim[1])
+
+            # flow1 = np.zeros(communities)
+            # flow2 = np.zeros(communities)
+            # flow3 = np.zeros(communities)
+            # flow4 = np.zeros(communities)
+            # if self.flowsim == True:
+            #     for s in range(communities):
+            #         #     relaxed constraints 
+            #         flow1[s] = pos_flow1[0,s] = np.random.uniform(self.flowlim[0],self.flowlim[1])
+            #         flow2[s] = pos_flow2[0,s] = np.random.uniform(flow1[s],self.flowlim[1])
+            #         flow3[s] = pos_flow3[0,s] = np.random.uniform(flow2[s],self.flowlim[1])
+            #         flow4[s] = pos_flow4[0,s] = np.random.uniform(flow3[s],self.flowlim[1])
+            
+            # cm_ax = pos_ax[0] = np.random.uniform(self.min_a,self.max_a)
+            # cm_ay = pos_ay[0] = np.random.uniform(self.min_a,self.max_a)
+            # m = pos_m[0] = np.random.uniform(self.min_m, self.max_m)
+
+        sed1=[0.0009, 0.0015, 0.0023]
+        sed2=[0.0015, 0.0017, 0.0024]
+        sed3=[0.0016, 0.0028, 0.0027]
+        sed4=[0.0017, 0.0031, 0.0043]
+        flow1=[0.055, 0.008 ,0.]
+        flow2=[0.082, 0.051, 0.]
+        flow3=[0.259, 0.172, 0.058]
+        flow4=[0.288, 0.185, 0.066]   
+        cm_ax = pos_ax[0] = self.true_ax #np.random.uniform(self.max_a,0.)
+        cm_ay = pos_ay[0] = self.true_ay #np.random.uniform(self.max_a,0.)
+        
+        cm_ay = pos_ay[0] = np.random.uniform(self.min_a, self.max_a)
         m = pos_m[0] = np.random.uniform(self.min_m, self.max_m)
 
         if (self.sedsim == True) and (self.flowsim == False):
@@ -373,49 +389,81 @@ class MCMC():
         for i in range(samples - 1):
             print '\nSample: ', i
             start = time.time()
-            p_sed1 = np.zeros(3)
-            p_sed2 = np.zeros(3)
-            p_sed3 = np.zeros(3)
-            p_sed4 = np.zeros(3)
-            for c in range(communities):
-                a = 0
-                while a < 10:
-                    p_sed1[c] = self.proposalJump(sed1[c], self.sedlim[0], self.sedlim[1], self.step_sed)
-                    p_sed4[c] = self.proposalJump(sed4[c], p_sed1[c], self.sedlim[1], self.step_sed)
-                    p_sed2[c] = self.proposalJump(sed2[c], p_sed1[c], p_sed4[c], self.step_sed)
-                    p_sed3[c] = self.proposalJump(sed3[c], p_sed2[c], p_sed4[c], self.step_sed)
-                    if ((p_sed1[c] < p_sed2[c]) and (p_sed2[c] < p_sed3[c])) and (p_sed3[c] < p_sed4[c]):
-                        a = 10
-                        break
-                    elif (((p_sed1[c] > p_sed2[c]) or (p_sed2[c] > p_sed3[c])) or (p_sed3[c] > p_sed4[c])) and (a==10):
-                        p_sed1[c] = sed1[c]
-                        p_sed2[c] = sed2[c]
-                        p_sed3[c] = sed3[c]
-                        p_sed4[c] = sed4[c]
-                    else:
-                        a += 1
+
+            p_sed1=[0.0009, 0.0015, 0.0023]
+            p_sed2=[0.0015, 0.0017, 0.0024]
+            p_sed3=[0.0016, 0.0028, 0.0027]
+            p_sed4=[0.0017, 0.0031, 0.0043]
+            p_flow1=[0.055, 0.008 ,0.]
+            p_flow2=[0.082, 0.051, 0.]
+            p_flow3=[0.259, 0.172, 0.058]
+            p_flow4=[0.288, 0.185, 0.066]
+            p_ax = self.true_ax
+            p_ay = self.true_ay
+            p_m = self.true_m
             
-            p_flow1 = np.zeros(3)
-            p_flow2 = np.zeros(3)
-            p_flow3 = np.zeros(3)
-            p_flow4 = np.zeros(3)
-            for d in range(communities):
-                a = 0
-                while a < 10:
-                    p_flow1[d] = self.proposalJump(flow1[d], self.flowlim[0], self.flowlim[1], self.step_flow)
-                    p_flow4[d] = self.proposalJump(flow4[d], p_flow1[d], self.flowlim[1], self.step_flow)
-                    p_flow2[d] = self.proposalJump(flow2[d], p_flow1[d], p_flow4[d], self.step_flow)
-                    p_flow3[d] = self.proposalJump(flow3[d], p_flow2[d], p_flow4[d], self.step_flow)
-                    if ((p_flow1[d] < p_flow2[d]) and (p_flow2[d] < p_flow3[d])) and (p_flow3[d] < p_flow4[d]):
-                        a = 10
-                        break
-                    elif (((p_flow1[d] > p_flow2[d]) or (p_flow2[d] > p_flow3[d])) or (p_flow3[d] > p_flow4[d])) and (a==10):
-                        p_flow1[d] = flow1[d]
-                        p_flow2[d] = flow2[d]
-                        p_flow3[d] = flow3[d]
-                        p_flow4[d] = flow4[d]
-                    else:
-                        a += 1
+            p_ay = self.proposalJump(cm_ay, self.min_a, self.max_a, self.step_a)
+            p_m = self.proposalJump(m, self.min_m, self.max_m, self.step_m)
+            
+            # a=0
+            # while a < 10:
+            #     p_flow3[self.assemblage-1]= self.proposalJump(flow3[self.assemblage-1],flow2[self.assemblage-1],flow4[self.assemblage-1], self.step_flow)
+            #     p_flow4[self.assemblage-1]= self.proposalJump(flow4[self.assemblage-1],flow3[self.assemblage-1],self.flowlim[1], self.step_flow)
+            #     if ((p_flow1[self.assemblage-1] < p_flow2[self.assemblage-1]) and (p_flow2[self.assemblage-1] < p_flow3[self.assemblage-1])) and (p_flow3[self.assemblage-1] < p_flow4[self.assemblage-1]):
+            #         a = 10
+            #         break
+            #     elif (((p_flow1[self.assemblage-1] > p_flow2[self.assemblage-1]) or (p_flow2[self.assemblage-1] > p_flow3[self.assemblage-1])) or (p_flow3[self.assemblage-1] > p_flow4[self.assemblage-1])) and (a==10):
+            #         p_flow1[self.assemblage-1] = flow1[self.assemblage-1]
+            #         p_flow2[self.assemblage-1] = flow2[self.assemblage-1]
+            #         p_flow3[self.assemblage-1] = flow3[self.assemblage-1]
+            #         p_flow4[self.assemblage-1] = flow4[self.assemblage-1]
+            #     else:
+            #         a += 1
+
+
+            # p_sed1 = np.zeros(3)
+            # p_sed2 = np.zeros(3)
+            # p_sed3 = np.zeros(3)
+            # p_sed4 = np.zeros(3)
+            # for c in range(communities):
+            #     a = 0
+            #     while a < 10:
+            #         p_sed1[c] = self.proposalJump(sed1[c], self.sedlim[0], self.sedlim[1], self.step_sed)
+            #         p_sed4[c] = self.proposalJump(sed4[c], p_sed1[c], self.sedlim[1], self.step_sed)
+            #         p_sed2[c] = self.proposalJump(sed2[c], p_sed1[c], p_sed4[c], self.step_sed)
+            #         p_sed3[c] = self.proposalJump(sed3[c], p_sed2[c], p_sed4[c], self.step_sed)
+            #         if ((p_sed1[c] < p_sed2[c]) and (p_sed2[c] < p_sed3[c])) and (p_sed3[c] < p_sed4[c]):
+            #             a = 10
+            #             break
+            #         elif (((p_sed1[c] > p_sed2[c]) or (p_sed2[c] > p_sed3[c])) or (p_sed3[c] > p_sed4[c])) and (a==10):
+            #             p_sed1[c] = sed1[c]
+            #             p_sed2[c] = sed2[c]
+            #             p_sed3[c] = sed3[c]
+            #             p_sed4[c] = sed4[c]
+            #         else:
+            #             a += 1
+            
+            # p_flow1 = np.zeros(3)
+            # p_flow2 = np.zeros(3)
+            # p_flow3 = np.zeros(3)
+            # p_flow4 = np.zeros(3)
+            # for d in range(communities):
+            #     a = 0
+            #     while a < 10:
+            #         p_flow1[d] = self.proposalJump(flow1[d], self.flowlim[0], self.flowlim[1], self.step_flow)
+            #         p_flow4[d] = self.proposalJump(flow4[d], p_flow1[d], self.flowlim[1], self.step_flow)
+            #         p_flow2[d] = self.proposalJump(flow2[d], p_flow1[d], p_flow4[d], self.step_flow)
+            #         p_flow3[d] = self.proposalJump(flow3[d], p_flow2[d], p_flow4[d], self.step_flow)
+            #         if ((p_flow1[d] < p_flow2[d]) and (p_flow2[d] < p_flow3[d])) and (p_flow3[d] < p_flow4[d]):
+            #             a = 10
+            #             break
+            #         elif (((p_flow1[d] > p_flow2[d]) or (p_flow2[d] > p_flow3[d])) or (p_flow3[d] > p_flow4[d])) and (a==10):
+            #             p_flow1[d] = flow1[d]
+            #             p_flow2[d] = flow2[d]
+            #             p_flow3[d] = flow3[d]
+            #             p_flow4[d] = flow4[d]
+            #         else:
+            #             a += 1
 
             # if self.sedsim == True:
             #     tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,communities)
@@ -453,9 +501,9 @@ class MCMC():
             #     p_flow3 = tmat[2,:]
             #     p_flow4 = tmat[3,:]
 
-            p_ax = self.proposalJump(cm_ax, self.max_a, 0, self.step_a)
-            p_ay = self.proposalJump(cm_ay, self.max_a, 0, self.step_a)
-            p_m = self.proposalJump(m, 0, self.max_m, self.step_m)
+            # p_ax = self.proposalJump(cm_ax, self.max_a, 0, self.step_a)
+            # p_ay = self.proposalJump(cm_ay, self.max_a, 0, self.step_a)
+            # p_m = self.proposalJump(m, 0, self.max_m, self.step_m)
             
             v_proposal = []
             if (self.sedsim == True) and (self.flowsim == False):
@@ -586,9 +634,9 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 100000 #input('Enter number of samples: ')
+    samples= 10000 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
-    description = 'time-based likelihood function, self.likelihoodWithPropn'
+    description = 'time-based likelihood function, self.likelihoodWithPropn, fix all, free m and a_s'
     assemblage = 2
     xmlinput = 'input_synth.xml'
     data_depths, data_vec_d = np.genfromtxt('data/synthdata_d_vec.txt', usecols=(0,1), unpack=True)
@@ -622,7 +670,7 @@ def main():
     step_m = 0.01 * abs(min_m-max_m)
     step_a = 0.01 * abs(min_a-max_a)
 
-    path_name = 'results_multinomial_prblikl'
+    path_name = 'results_multinom_t_freeglv'
     while os.path.exists('%s_%s' % (path_name, run_nb)):
         run_nb+=1
     if not os.path.exists('%s_%s' % (path_name, run_nb)):

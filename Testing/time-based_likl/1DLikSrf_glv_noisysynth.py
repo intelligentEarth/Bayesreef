@@ -206,7 +206,7 @@ class MCMC():
         return
 
 
-    def probabilisticLikelihood(self, reef, core_data, input_v):
+    def likelihoodWithPropn(self, reef, core_data, input_v):
         sim_propn, sim_timelay = self.run_Model(reef, input_v)
         print 'sim_propn', sim_propn[:20,:]
         intervals = sim_propn.shape[0]
@@ -226,7 +226,7 @@ class MCMC():
         rmse = self.rmse(sim_propn, core_data)
         return [likelihood, sim_propn, diff, rmse]
 
-    def deterministicLikelihood(self, reef, core_data, input_v):
+    def likelihoodWithDominance(self, reef, core_data, input_v):
         sim_data, sim_timelay = self.run_Model(reef, input_v)
         # sim_data = sim_data.T
         intervals = sim_data.shape[0]
@@ -290,12 +290,12 @@ class MCMC():
 
 
             # USER DEFINED: Substitute generated variables into proposal vector 
-            # ay = p_v1
+            m = p_v1
             
             # Proposal to be passed to runModel
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
             v_proposal = np.append(v_proposal,(ax,ay,m))
-            [likelihood, pred_data, diff, rmse] = self.probabilisticLikelihood(reef, self.core_data, v_proposal)
+            [likelihood, pred_data, diff, rmse] = self.likelihoodWithDominance(reef, self.core_data, v_proposal)
             print 'Likelihood:', likelihood, 'and difference score:', diff
             # timeCarb, pop, names = reef.plot.getTimePlotParameters()
             # print 'timeCarb', timeCarb
@@ -327,33 +327,34 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 100
+    samples= 500
     assemblage= 2
 
-    # v1 = 'Malthusian Parameter'
-    # v1_title = r'$\varepsilon$'
-    # min_v =0.01
-    # max_v = 0.15
+    v1 = 'Malthusian Parameter'
+    v1_title = r'$\varepsilon$'
+    min_v =0.01
+    max_v = 0.15
     
     # v1 = 'Main diagonal'
     # v1_title = r'$\alpha_m$'
     # min_v =-0.15
     # max_v = 0
 
-    v1 = 'Super-/sub-diagonals'
-    v1_title = r'$\alpha_s$'# r'$\varepsilon$'#r'$\alpha_m$'
-    min_v =-0.15
-    max_v = 0
+    # v1 = 'Super-/sub-diagonals'
+    # v1_title = r'$\alpha_s$'# r'$\varepsilon$'#r'$\alpha_m$'
+    # min_v =-0.15
+    # max_v = 0
 
     description = '1D likelihood surface, %s' % v1
+    description2 = 'self.likelihoodWithDominance'
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
     xmlinput = 'input_synth.xml'
-    core_depths = np.genfromtxt('data/synth_core_vec.txt', usecols=(0), unpack=True)
-    synth_data = 'data/data_timestructure_08_prop_2.txt'
+    core_depths = np.genfromtxt('data/synthdata_d_vec.txt', usecols=(0), unpack=True)
+    synth_data = 'data/synthdata_t_prop_08_2.txt'
     core_data = np.loadtxt(synth_data, usecols=(1,2,3,4))    
-    synth_vec = 'data/data_timestructure_08_vec.txt'
+    synth_vec = 'data/synthdata_t_vec_08_2.txt'
     core_time, data_vec = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
 
     vis = [False, False]
@@ -374,6 +375,7 @@ def main():
             outfile.write('Filename : {0}'.format(os.path.basename(__file__)))
             outfile.write('\nTest Description: ')
             outfile.write(description)
+            outfile.write(description2)
             outfile.write('\nSamples: {0}'.format(samples))
             
 
