@@ -656,11 +656,12 @@ def main():
 
     if not os.path.isfile(('%s/pos_burnin_proposal.csv' % (filename))):
         np.savetxt("%s/pos_burnin_proposal.csv" % (filename), pos_v, delimiter=',')
-
+    
+    sample_range = np.arange(burnin+1,samples+1, 1)
     plotResults.plotPosCore(pos_samples,core_depths, data_vec, x_data, mcmc.font, mcmc.width, filename)
     plotResults.boxPlots(nCommunities, pos_v, sedsim, flowsim, mcmc.font,mcmc.width,filename)    
-    plotResults.plotLiklAndDiff(pos_likl, pos_diff, samples, mcmc.font, filename)
-    plotResults.plotParameters(mcmc.filename, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
+    plotResults.plotLiklAndDiff(pos_likl, pos_diff, sample_range, mcmc.font, filename)
+    plotResults.plotParameters(mcmc.filename, sample_range, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
         pos_m, pos_ax, pos_ay, mcmc.true_m, mcmc.true_ax, mcmc.true_ay, 
         pos_sed1, pos_sed2, pos_sed3, pos_sed4, mcmc.initial_sed,
         pos_flow1, pos_flow2, pos_flow3, pos_flow4, mcmc.initial_flow)

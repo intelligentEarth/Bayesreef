@@ -180,7 +180,7 @@ class MCMC():
         log_core[log_core == -inf] = 0
         z = log_core * core_data
         likelihood = np.sum(z)
-        diff = self.diff_score(sim_t_propn,core_data, intervals)
+        diff = self.diffScore(sim_t_propn,core_data, intervals)
         # rmse = self.rmse(sim_t_propn, core_data)
         return [likelihood, sim_t_propn, sim_d_propn.T, diff]
            
@@ -234,6 +234,9 @@ class MCMC():
         samples = self.samples
         data_vec_t = self.data_vec_t
         data_vec_d = self.data_vec_d
+        data_depths = self.data_depths
+        communities = self.communities
+        core_data = self.core_data
 
         with file(('%s/description.txt' % (self.filename)),'a') as outfile:
             outfile.write('\nstep_m: {0}'.format(self.step_m))
@@ -242,38 +245,38 @@ class MCMC():
             outfile.write('\nstep_flow: {0}'.format(self.step_flow))
 
         # Create space to store accepted samples for posterior 
-        pos_sed1 = np.zeros((samples , self.communities)) # sample rows, self.communities column
-        pos_sed2 = np.zeros((samples , self.communities)) 
-        pos_sed3 = np.zeros((samples , self.communities))
-        pos_sed4 = np.zeros((samples , self.communities))
-        pos_flow1 = np.zeros((samples , self.communities))
-        pos_flow2 = np.zeros((samples , self.communities))
-        pos_flow3 = np.zeros((samples , self.communities))
-        pos_flow4 = np.zeros((samples , self.communities))
+        pos_sed1 = np.zeros((samples , communities)) # sample rows, communities column
+        pos_sed2 = np.zeros((samples , communities)) 
+        pos_sed3 = np.zeros((samples , communities))
+        pos_sed4 = np.zeros((samples , communities))
+        pos_flow1 = np.zeros((samples , communities))
+        pos_flow2 = np.zeros((samples , communities))
+        pos_flow3 = np.zeros((samples , communities))
+        pos_flow4 = np.zeros((samples , communities))
         pos_ax = np.zeros(samples)
         pos_ay = np.zeros(samples)
         pos_m = np.zeros(samples)
         # Create space to store fx of all samples
-        pos_samples_d = np.zeros((samples, self.data_vec_d.shape[0]))
-        pos_samples_t = np.zeros((samples, self.core_data.shape[0]))
+        pos_samples_d = np.zeros((samples, data_vec_d.shape[0]))
+        pos_samples_t = np.zeros((samples, core_data.shape[0]))
         #      INITIAL PREDICTION       #
-        sed1 = np.zeros(self.communities)
-        sed2 = np.zeros(self.communities)
-        sed3 = np.zeros(self.communities)
-        sed4 = np.zeros(self.communities)
+        sed1 = np.zeros(communities)
+        sed2 = np.zeros(communities)
+        sed3 = np.zeros(communities)
+        sed4 = np.zeros(communities)
         if self.sedsim == True:
-            for s in range(self.communities):
+            for s in range(communities):
                 sed1[s] = pos_sed1[0,s] = np.random.uniform(self.sedlim[0],self.sedlim[1])
                 sed2[s] = pos_sed2[0,s] = np.random.uniform(sed1[s],self.sedlim[1])
                 sed3[s] = pos_sed3[0,s] = np.random.uniform(sed2[s],self.sedlim[1])
                 sed4[s] = pos_sed4[0,s] = np.random.uniform(sed3[s],self.sedlim[1])
 
-        flow1 = np.zeros(self.communities)
-        flow2 = np.zeros(self.communities)
-        flow3 = np.zeros(self.communities)
-        flow4 = np.zeros(self.communities)
+        flow1 = np.zeros(communities)
+        flow2 = np.zeros(communities)
+        flow3 = np.zeros(communities)
+        flow4 = np.zeros(communities)
         if self.flowsim == True:
-            for s in range(self.communities):
+            for s in range(communities):
                 #     relaxed constraints 
                 flow1[s] = pos_flow1[0,s] = np.random.uniform(self.flowlim[0],self.flowlim[1])
                 flow2[s] = pos_flow2[0,s] = np.random.uniform(flow1[s],self.flowlim[1])
@@ -296,7 +299,7 @@ class MCMC():
 
         # Declare pyReef-Core and initialize
         reef = Model()
-        [likelihood, sim_pred_t, sim_pred_d, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
+        [likelihood, sim_pred_t, sim_pred_d, diff] = self.probabilisticLikelihood(reef, core_data, v_proposal)
         print '\tInitial likelihood:', likelihood
         pos_diff = np.full(samples,diff)
         pos_likl = np.full(samples, likelihood)
@@ -325,25 +328,25 @@ class MCMC():
         fig = plt.figure(figsize=(3,6))
         ax = fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
-        ax.plot(data_vec_d, self.data_depths, label='Synthetic core', color='k')
-        ax.plot(core_vec, self.data_depths, label='Initial predicted core')
+        ax.plot(data_vec_d, data_depths, label='Synthetic core', color='k')
+        ax.plot(core_vec, data_depths, label='Initial predicted core')
         ax.set_title("Initial Prediction", size=self.font+2)
         plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=self.font+1)
         ax.set_ylabel("Core depth [m]",size=self.font+1)
-        ax.set_ylim([0,np.amax(self.data_depths)])
+        ax.set_ylim([0,np.amax(data_depths)])
         ax.set_ylim(ax.get_ylim()[::-1])
         plt.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
         fig.savefig('%s/begin.png' % (self.filename), bbox_inches='tight',dpi=200,transparent=False)
-        plt.clf()
+        plt.close()
         # Accumulating figure of all proposals - Depth
         finalfig_d = plt.figure(figsize=(3,6))
         axprop_d = finalfig_d.add_subplot(111)
-        axprop_d.plot(data_vec_d, self.data_depths, label='Synthetic core', color='k')
-        axprop_d.plot(core_vec, self.data_depths)
+        # axprop_d.plot(data_vec_d, data_depths, label='Synthetic core', color='k')
+        axprop_d.plot(core_vec, data_depths)
         axprop_d.set_title("Accepted Proposals", size=self.font+2)
         plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=self.font+1)
         axprop_d.set_ylabel("Depth [m]",size=self.font+1)
-        axprop_d.set_ylim([0,np.amax(self.data_depths)])
+        axprop_d.set_ylim([0,np.amax(data_depths)])
         axprop_d.set_ylim(axprop_d.get_ylim()[::-1])
 
         # Initial prediction - Time
@@ -374,7 +377,7 @@ class MCMC():
             p_sed2 = np.zeros(3)
             p_sed3 = np.zeros(3)
             p_sed4 = np.zeros(3)
-            for c in range(self.communities):
+            for c in range(communities):
                 a = 0
                 while a < 10:
                     p_sed1[c] = self.proposalJump(sed1[c], self.sedlim[0], self.sedlim[1], self.step_sed)
@@ -396,7 +399,7 @@ class MCMC():
             p_flow2 = np.zeros(3)
             p_flow3 = np.zeros(3)
             p_flow4 = np.zeros(3)
-            for d in range(self.communities):
+            for d in range(communities):
                 a = 0
                 while a < 10:
                     p_flow1[d] = self.proposalJump(flow1[d], self.flowlim[0], self.flowlim[1], self.step_flow)
@@ -415,19 +418,14 @@ class MCMC():
                         a += 1
 
             # if self.sedsim == True:
-            #     tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,self.communities)
+            #     tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,communities)
             #     tmatrix = tmat.T
             #     t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
-            #     for x in range(self.communities):
+            #     for x in range(communities):
             #         for s in range(tmatrix.shape[1]):
             #             t2matrix[x,s] = self.proposalJump(tmatrix[x,s], self.sedlim[0], self.sedlim[1], self.step_sed)
-            #             # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
-            #             # if t2matrix[x,s] >= self.sedlimits[x,1]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
-            #             # elif t2matrix[x,s] <= self.sedlimits[x,0]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
             #     # reorder each row , then transpose back as sed1, etc.
-            #     tmp = np.zeros((self.communities,4))
+            #     tmp = np.zeros((communities,4))
             #     for x in range(t2matrix.shape[0]):
             #         a = np.sort(t2matrix[x,:])
             #         tmp[x,:] = a
@@ -438,19 +436,14 @@ class MCMC():
             #     p_sed4 = tmat[3,:]
                 
             # if self.flowsim == True:
-            #     tmat = np.concatenate((flow1,flow2,flow3,flow4)).reshape(4,self.communities)
+            #     tmat = np.concatenate((flow1,flow2,flow3,flow4)).reshape(4,communities)
             #     tmatrix = tmat.T
             #     t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
-            #     for x in range(self.communities):#-3):
+            #     for x in range(communities):#-3):
             #         for s in range(tmatrix.shape[1]):
             #             t2matrix[x,s] = self.proposalJump(tmatrix[x,s], self.flowlim[0], self.flowlim[1], self.step_flow)
-            #             # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
-            #             # if t2matrix[x,s] >= self.flowlimits[x,1]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
-            #             # elif t2matrix[x,s] <= self.flowlimits[x,0]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
             #     # reorder each row , then transpose back as flow1, etc.
-            #     tmp = np.zeros((self.communities,4))
+            #     tmp = np.zeros((communities,4))
             #     for x in range(t2matrix.shape[0]):
             #         a = np.sort(t2matrix[x,:])
             #         tmp[x,:] = a
@@ -473,7 +466,7 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            [likelihood_proposal, sim_pred_t, sim_pred_d, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
+            [likelihood_proposal, sim_pred_t, sim_pred_d, diff] = self.probabilisticLikelihood(reef, core_data, v_proposal)
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
@@ -517,13 +510,13 @@ class MCMC():
                 pos_ay[i + 1] = cm_ay
                 pos_m[i + 1] = m
                 pos_v[i + 1,] = v_proposal
-                pos_samples_t[i + 1,] = self.convertCoreFormat(sim_pred_t)
-                pos_samples_d[i + 1,] = self.convertCoreFormat(sim_pred_d)
                 pos_diff[i + 1,] = diff
                 pos_likl[i + 1,] = likelihood
-                
+                pos_samples_t[i + 1,] = self.convertCoreFormat(sim_pred_t)
                 core_vec = self.convertCoreFormat(sim_pred_d)
-                axprop_d.plot(core_vec,self.data_depths, label=None)  
+                pos_samples_d[i + 1,] = core_vec
+                
+                axprop_d.plot(core_vec,data_depths, label=None)  
                 timecarb,pop,names = reef.plot.getTimePlotParameters()
                 for x in range(len(pop)):
                     axprop_t.plot(timecarb[::-1], pop[x,:],linewidth=self.width)
@@ -578,14 +571,14 @@ class MCMC():
 
         # lgd = axprop_d.legend(frameon=False, prop={'size':self.font+1},bbox_to_anchor = (1.,0.1))
         finalfig_d.savefig('%s/proposals_d.png'% (self.filename),bbox_inches='tight',dpi=200,transparent=False)
-        plt.clf()
+        plt.close()
 
         finalfig_t.savefig('%s/proposals_t.png'% (self.filename),bbox_inches='tight',dpi=200,transparent=False)
-        plt.clf()
+        plt.close()
 
         return (pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
         	pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
-        	self.data_depths, accept_ratio, accepted_count, data_vec_t)
+        	data_depths, accept_ratio, accepted_count, data_vec_t, x_tick_labels, x_tick_values)
 
 #####################################################################
 
@@ -595,7 +588,7 @@ def main():
     random.seed(time.time())
     samples= 10 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
-    description = 'New likelihood funciton, only isolating 1 parameter'
+    description = 'time-based likelihood function.'
     assemblage = 2
     xmlinput = 'input_synth.xml'
     data_depths, data_vec_d = np.genfromtxt('data/synthdata_d_vec.txt', usecols=(0,1), unpack=True)
@@ -653,7 +646,7 @@ def main():
 
     [pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
     pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, data_depths,
-    accept_ratio, accepted_count, data_vec_t] = mcmc.sampler()
+    accept_ratio, accepted_count, data_vec_t,x_tick_labels, x_tick_values] = mcmc.sampler()
     print 'Successfully sampled'
     
     burnin = 0.1 * samples  # use post burn in samples
@@ -677,7 +670,6 @@ def main():
     diff_mu = np.mean(pos_diff)
     diff_std = np.std(pos_diff)
     diff_mode, diff_count = stats.mode(pos_diff)
-    
     print 'Mean diff:',diff_mu, ', standard deviation:', diff_std
 
     with file(('%s/out_results.txt' % (filename)),'w') as outres:
@@ -701,12 +693,11 @@ def main():
 
     if not os.path.isfile(('%s/pos_burnin_proposal.csv' % (filename))):
         np.savetxt("%s/pos_burnin_proposal.csv" % (filename), pos_v, delimiter=',')
-
-    plotResults.plotPosCore(pos_samples_d,data_depths, data_vec_d, data_times, mcmc.font, mcmc.width, filename)
-    
+    sample_range = np.arange(burnin+1,samples+1, 1)
+    plotResults.plotPosCore(pos_samples_d, data_depths, data_vec_d, x_tick_labels,x_tick_values, mcmc.font, mcmc.width, filename)
     plotResults.boxPlots(nCommunities, pos_v, sedsim, flowsim, mcmc.font,mcmc.width,filename)    
-    plotResults.plotLiklAndDiff(pos_likl, pos_diff, samples, mcmc.font, filename)
-    plotResults.plotParameters(mcmc.filename, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
+    plotResults.plotLiklAndDiff(pos_likl, pos_diff, sample_range, mcmc.font, filename)
+    plotResults.plotParameters(mcmc.filename, sample_range, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
         pos_m, pos_ax, pos_ay, mcmc.true_m, mcmc.true_ax, mcmc.true_ay, 
         pos_sed1, pos_sed2, pos_sed3, pos_sed4, mcmc.true_sed,
         pos_flow1, pos_flow2, pos_flow3, pos_flow4, mcmc.true_flow)
