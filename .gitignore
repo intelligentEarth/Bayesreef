@@ -20,13 +20,9 @@ __MACOSX
 .DS_Store
 *.dSYM
 
-Testing/results_multinomial*
+Testing/results_*
+Testing/model*
 Testing/run*
-Testing/runModel_testing.py
-Testing/mcmc_multinomial_*
-Testing/mcmc_6.py
-Testing/results_pseudo*
-Testing/likelihood_surface
-Testing/saved_results
+Testing/1dsurf*
 Testing/misc
-
+Testing/saved_results
