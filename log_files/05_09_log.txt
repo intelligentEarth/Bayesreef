@@ -1,5 +1,5 @@
 Activity log
-Wednesday, May 9
+Wednesday May 9, Jodie Pall
 
 After a meeting with Sally, Rohit and Danial, we decided to create a new likelihood function based on time structure rather than depth structure of cores. 
 We will re-program the 'deterministic' multi-nomial likelihood so that it compares cores based on the time-structure of cores, and simultaneously work on

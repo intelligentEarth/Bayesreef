@@ -107,6 +107,18 @@ class MCMC():
         return rmse + sedprop
 
     def nonStationaryLikelihood(self,reef, synth_data, synth_depths, input_v):
+        """
+        1. Locate position of cut-off points and assemblage transition in the synthetic data
+        1a) produce synthetic data from the p2 nd array, and make the 'data points' the location of the cut-off points and the value in that array
+        2. From the bottom of sim core, find the location of the cut-off points and what is contained in each section 
+        3a.  store probabilities in an empty list z, to get product of at end
+        3b. In loop,
+            check and see if first sim cut-point is LEQ synth cut-point
+            For given sim cut-point, check that all below sim cut-point is same assemblage as synth cut point
+            If it's the same, write to z the proportion of max. cut point 
+            if it is different, print likelihood as 0, break loop, return zero. 
+            continue to second cut-point
+        """
         sim_propn, sim_depths = self.runModel(reef,input_v) # write code to get depths for the proportions 
         sim_propn = sim_propn.T
         print 'sim_propn', sim_propn
@@ -138,23 +150,7 @@ class MCMC():
                 break
         return likelihood
 
-
-        """
-        1. Locate position of cut-off points and assemblage transition in the synthetic data
-        1a) produce synthetic data from the p2 nd array, and make the 'data points' the location of the cut-off points and the value in that array
-        2. From the bottom of sim core, find the location of the cut-off points and what is contained in each section 
-        3a.  store probabilities in an empty list z, to get product of at end
-        3b. In loop,
-        	check and see if first sim cut-point is LEQ synth cut-point
-        	For given sim cut-point, check that all below sim cut-point is same assemblage as synth cut point
-        	If it's the same, write to z the proportion of max. cut point 
-        	if it is different, print likelihood as 0, break loop, return zero. 
-        	continue to second cut-point
-        """
-
-
-
-    def probabilisticLikelihood(self, reef, synth_data, input_v):
+    def likelihoodWithPropn(self, reef, synth_data, input_v):
             sim_propn = self.runModel(reef, input_v)
             sim_propn = sim_propn.T
             intervals = sim_propn.shape[0]
@@ -170,7 +166,7 @@ class MCMC():
             # rmse = self.rmse(sim_propn, self.synth_data)
             return [likelihood, sim_propn, diff]
            
-    def deterministicLikelihood(self, reef, synth_data, input_v):
+    def likelihoodWithDominance(self, reef, synth_data, input_v):
         sim_data = self.runModel(reef, input_v)
         sim_data = sim_data.T
         intervals = sim_data.shape[0]
@@ -289,7 +285,7 @@ class MCMC():
         # Declare pyReef-Core and initialize
         reef = Model()
 
-        [likelihood, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
+        [likelihood, pred_data, diff] = self.likelihoodWithDominance(reef, self.core_data, v_proposal)
         pos_diff = np.full(samples,diff)
         pos_likl = np.full(samples, likelihood)
         core_vec = self.convertCoreFormat(pred_data, self.communities)
@@ -301,11 +297,11 @@ class MCMC():
         count_list = []
         count_list.append(0)
         # Uncomment if you want to see posterior as the simulations runs
-        # saveParameters.saveParameters(self.filename, self.sedsim, self.flowsim, naccept, 
-        #     pos_m[0], pos_ax[0], pos_ay[0], 
-        #     pos_sed1[0,], pos_sed2[0,], pos_sed3[0,], pos_sed4[0,],
-        #     pos_flow1[0,], pos_flow2[0,], pos_flow3[0,], pos_flow4[0,],
-        #     pos_diff[0],pos_likl[0], pos_samples[0,],pos_v[0,])
+        saveParameters.saveParameters(self.filename, self.sedsim, self.flowsim, naccept, 
+            pos_m[0], pos_ax[0], pos_ay[0], 
+            pos_sed1[0,], pos_sed2[0,], pos_sed3[0,], pos_sed4[0,],
+            pos_flow1[0,], pos_flow2[0,], pos_flow3[0,], pos_flow4[0,],
+            pos_diff[0],pos_likl[0], pos_samples[0,],pos_v[0,])
         
         # print 'Begin sampling using MCMC random walk'
         x_tick_labels = ['No growth','Shallow', 'Mod-deep', 'Deep', 'Sediment']
@@ -340,95 +336,41 @@ class MCMC():
         for i in range(samples - 1):
             print '\nSample: ', i
             start = time.time()
-            p_sed1 = np.zeros(3)
-            p_sed2 = np.zeros(3)
-            p_sed3 = np.zeros(3)
-            p_sed4 = np.zeros(3)
-            for c in range(self.communities):
-                a = 0
-                while a < 10:
-                    p_sed1[c] = self.proposalJump(sed1[c], self.sedlim[0], self.sedlim[1], self.step_sed)
-                    p_sed4[c] = self.proposalJump(sed4[c], p_sed1[c], self.sedlim[1], self.step_sed)
-                    p_sed2[c] = self.proposalJump(sed2[c], p_sed1[c], p_sed4[c], self.step_sed)
-                    p_sed3[c] = self.proposalJump(sed3[c], p_sed2[c], p_sed4[c], self.step_sed)
-                    if ((p_sed1[c] < p_sed2[c]) and (p_sed2[c] < p_sed3[c])) and (p_sed3[c] < p_sed4[c]):
-                        a = 10
-                        break
-                    elif (((p_sed1[c] > p_sed2[c]) or (p_sed2[c] > p_sed3[c])) or (p_sed3[c] > p_sed4[c])) and (a==10):
-                        p_sed1[c] = sed1[c]
-                        p_sed2[c] = sed2[c]
-                        p_sed3[c] = sed3[c]
-                        p_sed4[c] = sed4[c]
-                    else:
-                        a += 1
-            
-            p_flow1 = np.zeros(3)
-            p_flow2 = np.zeros(3)
-            p_flow3 = np.zeros(3)
-            p_flow4 = np.zeros(3)
-            for d in range(self.communities):
-                a = 0
-                while a < 10:
-                    p_flow1[d] = self.proposalJump(flow1[d], self.flowlim[0], self.flowlim[1], self.step_flow)
-                    p_flow4[d] = self.proposalJump(flow4[d], p_flow1[d], self.flowlim[1], self.step_flow)
-                    p_flow2[d] = self.proposalJump(flow2[d], p_flow1[d], p_flow4[d], self.step_flow)
-                    p_flow3[d] = self.proposalJump(flow3[d], p_flow2[d], p_flow4[d], self.step_flow)
-                    if ((p_flow1[d] < p_flow2[d]) and (p_flow2[d] < p_flow3[d])) and (p_flow3[d] < p_flow4[d]):
-                        a = 10
-                        break
-                    elif (((p_flow1[d] > p_flow2[d]) or (p_flow2[d] > p_flow3[d])) or (p_flow3[d] > p_flow4[d])) and (a==10):
-                        p_flow1[d] = flow1[d]
-                        p_flow2[d] = flow2[d]
-                        p_flow3[d] = flow3[d]
-                        p_flow4[d] = flow4[d]
-                    else:
-                        a += 1
-
-            # if self.sedsim == True:
-            #     tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,self.communities)
-            #     tmatrix = tmat.T
-            #     t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
-            #     for x in range(self.communities):
-            #         for s in range(tmatrix.shape[1]):
-            #             t2matrix[x,s] = self.proposalJump(tmatrix[x,s], self.sedlim[0], self.sedlim[1], self.step_sed)
-            #             # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_sed)
-            #             # if t2matrix[x,s] >= self.sedlimits[x,1]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
-            #             # elif t2matrix[x,s] <= self.sedlimits[x,0]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
-            #     # reorder each row , then transpose back as sed1, etc.
-            #     tmp = np.zeros((self.communities,4))
-            #     for x in range(t2matrix.shape[0]):
-            #         a = np.sort(t2matrix[x,:])
-            #         tmp[x,:] = a
-            #     tmat = tmp.T
-            #     p_sed1 = tmat[0,:]
-            #     p_sed2 = tmat[1,:]
-            #     p_sed3 = tmat[2,:]
-            #     p_sed4 = tmat[3,:]
+            if self.sedsim == True:
+                tmat = np.concatenate((sed1,sed2,sed3,sed4)).reshape(4,self.communities)
+                tmatrix = tmat.T
+                t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
+                for x in range(self.communities):
+                    for s in range(tmatrix.shape[1]):
+                        t2matrix[x,s] = self.proposalJump(tmatrix[x,s], self.sedlim[0], self.sedlim[1], self.step_sed)
+                # reorder each row , then transpose back as sed1, etc.
+                tmp = np.zeros((self.communities,4))
+                for x in range(t2matrix.shape[0]):
+                    a = np.sort(t2matrix[x,:])
+                    tmp[x,:] = a
+                tmat = tmp.T
+                p_sed1 = tmat[0,:]
+                p_sed2 = tmat[1,:]
+                p_sed3 = tmat[2,:]
+                p_sed4 = tmat[3,:]
                 
-            # if self.flowsim == True:
-            #     tmat = np.concatenate((flow1,flow2,flow3,flow4)).reshape(4,self.communities)
-            #     tmatrix = tmat.T
-            #     t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
-            #     for x in range(self.communities):#-3):
-            #         for s in range(tmatrix.shape[1]):
-            #             t2matrix[x,s] = self.proposalJump(tmatrix[x,s], self.flowlim[0], self.flowlim[1], self.step_flow)
-            #             # t2matrix[x,s] = tmatrix[x,s] + np.random.normal(0,self.step_flow)
-            #             # if t2matrix[x,s] >= self.flowlimits[x,1]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
-            #             # elif t2matrix[x,s] <= self.flowlimits[x,0]:
-            #             #     t2matrix[x,s] = tmatrix[x,s]
-            #     # reorder each row , then transpose back as flow1, etc.
-            #     tmp = np.zeros((self.communities,4))
-            #     for x in range(t2matrix.shape[0]):
-            #         a = np.sort(t2matrix[x,:])
-            #         tmp[x,:] = a
-            #     tmat = tmp.T
-            #     p_flow1 = tmat[0,:]
-            #     p_flow2 = tmat[1,:]
-            #     p_flow3 = tmat[2,:]
-            #     p_flow4 = tmat[3,:]
+            if self.flowsim == True:
+                tmat = np.concatenate((flow1,flow2,flow3,flow4)).reshape(4,self.communities)
+                tmatrix = tmat.T
+                t2matrix = np.zeros((tmatrix.shape[0], tmatrix.shape[1]))
+                for x in range(self.communities):#-3):
+                    for s in range(tmatrix.shape[1]):
+                        t2matrix[x,s] = self.proposalJump(tmatrix[x,s], self.flowlim[0], self.flowlim[1], self.step_flow)
+                # reorder each row , then transpose back as flow1, etc.
+                tmp = np.zeros((self.communities,4))
+                for x in range(t2matrix.shape[0]):
+                    a = np.sort(t2matrix[x,:])
+                    tmp[x,:] = a
+                tmat = tmp.T
+                p_flow1 = tmat[0,:]
+                p_flow2 = tmat[1,:]
+                p_flow3 = tmat[2,:]
+                p_flow4 = tmat[3,:]
 
             p_ax = self.proposalJump(cm_ax, self.max_a, 0, self.step_a)
             p_ay = self.proposalJump(cm_ay, self.max_a, 0, self.step_a)
@@ -443,8 +385,8 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
 
-            [likelihood_proposal, pred_data, diff] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
-            diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
+            [likelihood_proposal, pred_data, diff] = self.likelihoodWithDominance(reef, self.core_data, v_proposal)
+            diff_likelihood = likelihood_proposal - likelihood # to divide log probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
             u = random.uniform(0, 1)
@@ -493,11 +435,11 @@ class MCMC():
                 
                 ax_append.plot(pos_samples[i + 1,],x_data, label=None)
                 # Uncomment if you want to see posterior as the simulations runs
-                # saveParameters.saveParameters(self.filename, self.sedsim, self.flowsim, i+1, 
-                #     pos_m[i+1], pos_ax[i+1], pos_ay[i+1], 
-                #     pos_sed1[i+1,], pos_sed2[i+1,], pos_sed3[i+1,], pos_sed4[i+1,],
-                #     pos_flow1[i+1,], pos_flow2[i+1,], pos_flow3[i+1,], pos_flow4[i+1,],
-                #     pos_diff[i+1],pos_likl[i+1], pos_samples[i+1,],pos_v[i+1,])
+                saveParameters.saveParameters(self.filename, self.sedsim, self.flowsim, i+1, 
+                    pos_m[i+1], pos_ax[i+1], pos_ay[i+1], 
+                    pos_sed1[i+1,], pos_sed2[i+1,], pos_sed3[i+1,], pos_sed4[i+1,],
+                    pos_flow1[i+1,], pos_flow2[i+1,], pos_flow3[i+1,], pos_flow4[i+1,],
+                    pos_diff[i+1],pos_likl[i+1], pos_samples[i+1,],pos_v[i+1,])
 
             else: #reject
                 pos_v[i + 1,] = pos_v[i,]
@@ -520,11 +462,11 @@ class MCMC():
                 pos_ay[i+1] = pos_ay[i]
                 pos_m[i+1] = pos_m[i]
                 # Uncomment if you want to see posterior as the simulations runs
-                # saveParameters.saveParameters(self.filename, self.sedsim, self.flowsim, i+1, 
-                #     pos_m[i+1], pos_ax[i+1], pos_ay[i+1], 
-                #     pos_sed1[i+1,], pos_sed2[i+1,], pos_sed3[i+1,], pos_sed4[i+1,],
-                #     pos_flow1[i+1,], pos_flow2[i+1,], pos_flow3[i+1,], pos_flow4[i+1,],
-                #     pos_diff[i+1],pos_likl[i+1], pos_samples[i+1,],pos_v[i+1,])
+                saveParameters.saveParameters(self.filename, self.sedsim, self.flowsim, i+1, 
+                    pos_m[i+1], pos_ax[i+1], pos_ay[i+1], 
+                    pos_sed1[i+1,], pos_sed2[i+1,], pos_sed3[i+1,], pos_sed4[i+1,],
+                    pos_flow1[i+1,], pos_flow2[i+1,], pos_flow3[i+1,], pos_flow4[i+1,],
+                    pos_diff[i+1],pos_likl[i+1], pos_samples[i+1,],pos_v[i+1,])
                 print i, 'rejected and retained'
 
             end = time.time()
@@ -555,7 +497,7 @@ def main():
     random.seed(time.time())
     samples= 100000 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
-    description = 'depth-based likelihood function, self.deterministicLikelihood'
+    description = 'depth-based likelihood function, self.likelihoodWithDominance'
     assemblage = 2
     xmlinput = 'input_synth.xml'
     synth_vec = 'data/synth_core_vec.txt'
@@ -586,7 +528,7 @@ def main():
     step_m = 0.01 * abs(min_m-max_m)
     step_a = 0.01 * abs(min_a-max_a)
 
-    path_name = 'results_multinomial_prblikl'
+    path_name = 'results_multinomial'
     while os.path.exists('%s_%s' % (path_name, run_nb)):
         run_nb+=1
     if not os.path.exists('%s_%s' % (path_name, run_nb)):

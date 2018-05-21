@@ -1,0 +1,70 @@
+Activity log
+Monday May 11, Jodie Pall
+
+In the proposal function for the environmental exposure thresholds, point 1-4 must be monotonically increasing.
+The old proposal function proposes purturbations to each threshold, then sorts them so they are monotonic increasing. Danial and I think that the reversible step condition may not hold with this function, as the values of nearby points may swap.
+A newer version of the proposal function proposes that at most 10 attempts are made of proposing perturbations to parameters in a simulation that satisfy monotonicity, and if not, the proposal goes back to the current step. This function needs to be de-bugged.
+
+As a low-priority goal, de-bugging of the new proposal has been put on hold and the old proposal function is going to be used. I will discuss with Sally later on whether this is an approporiate proposal.
+
+For now, I will move onto improving the parallel tempering version of BayesReef (pt-BayesReef).
+
+
+Newer proposal code:
+p_sed1 = np.zeros(3)
+p_sed2 = np.zeros(3)
+p_sed3 = np.zeros(3)
+p_sed4 = np.zeros(3)
+a = 0
+while a < 10:
+    check=0
+    for c in range(self.communities):
+        p_sed1[c] = self.proposalJump(sed1[c], self.sedlim[0], self.sedlim[1], self.step_sed)
+        p_sed4[c] = self.proposalJump(sed4[c], p_sed1[c], self.sedlim[1], self.step_sed)
+        p_sed2[c] = self.proposalJump(sed2[c], p_sed1[c], p_sed4[c], self.step_sed)
+        p_sed3[c] = self.proposalJump(sed3[c], p_sed2[c], p_sed4[c], self.step_sed)
+        if ((p_sed1[c] < p_sed2[c]) and (p_sed2[c] < p_sed3[c])) and (p_sed3[c] < p_sed4[c]):
+            check =+1
+        elif (check == 3):
+            a = 10
+            break
+        elif (((p_sed1[c] > p_sed2[c]) or (p_sed2[c] > p_sed3[c])) or (p_sed3[c] > p_sed4[c])) and (a==10):
+            p_sed1[c] = sed1[c]
+            p_sed2[c] = sed2[c]
+            p_sed3[c] = sed3[c]
+            p_sed4[c] = sed4[c]
+        else:
+            a += 1
+print 'p_sed1', p_sed1
+print 'p_sed2', p_sed2
+print 'p_sed3', p_sed3
+print 'p_sed4', p_sed4
+
+p_flow1 = np.zeros(3)
+p_flow2 = np.zeros(3)
+p_flow3 = np.zeros(3)
+p_flow4 = np.zeros(3)
+a = 0
+while a < 10:
+    check=0
+    for d in range(self.communities):
+        p_flow1[d] = self.proposalJump(flow1[d], self.flowlim[0], self.flowlim[1], self.step_flow)
+        p_flow4[d] = self.proposalJump(flow4[d], p_flow1[d], self.flowlim[1], self.step_flow)
+        p_flow2[d] = self.proposalJump(flow2[d], p_flow1[d], p_flow4[d], self.step_flow)
+        p_flow3[d] = self.proposalJump(flow3[d], p_flow2[d], p_flow4[d], self.step_flow)
+        if ((p_flow1[d] < p_flow2[d]) and (p_flow2[d] < p_flow3[d])) and (p_flow3[d] < p_flow4[d]):
+            check =+1
+        elif (check == 3):
+            a = 10
+            break
+        elif (((p_flow1[d] > p_flow2[d]) or (p_flow2[d] > p_flow3[d])) or (p_flow3[d] > p_flow4[d])) and (a==10):
+            p_flow1[d] = flow1[d]
+            p_flow2[d] = flow2[d]
+            p_flow3[d] = flow3[d]
+            p_flow4[d] = flow4[d]
+        else:
+            a += 1
+print 'p_flow1', p_flow1
+print 'p_flow2', p_flow2
+print 'p_flow3', p_flow3
+print 'p_flow4', p_flow4
