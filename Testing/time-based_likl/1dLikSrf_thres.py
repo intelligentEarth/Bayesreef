@@ -16,6 +16,7 @@ from cycler import cycler
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+# from matplotlib import cm
 from matplotlib.cm import terrain, plasma, Set2
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -41,10 +42,12 @@ class MCMC():
     def __init__(self, simtime, samples, communities, core_data, core_depths,data_vec, timestep,filename, 
         xmlinput, sedsim, sedlim, flowsim, flowlim, min_v, max_v, assemblage, vis, description,
         v1, v1_title):
+        self.font = 10
+        self.width = 1
         self.filename = filename
         self.input = xmlinput
         self.communities = communities
-        self.samples = samples       
+        self.samples = samples   
         self.core_data = core_data
         self.core_depths = core_depths
         self.data_vec = data_vec
@@ -54,25 +57,25 @@ class MCMC():
         self.flowsim = flowsim
         self.sedlim = sedlim
         self.flowlim = flowlim
-        self.min_v = min_v
-        self.max_v = max_v
         self.simtime = simtime
-        self.assemblage = assemblage
-        self.font = 10
-        self.width = 1
         self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
-        self.initial_sed = []
-        self.initial_flow = []
+        
+        self.true_sed = []
+        self.true_flow = []
         self.true_m = 0.08
         self.true_ax = -0.01
         self.true_ay = -0.03
+        self.min_v = min_v
+        self.max_v = max_v
+        
+        self.assemblage = assemblage
         self.description = description
         self.var1= v1
         self.var1_title = v1_title
 
     def run_Model(self, reef, input_vector):
         reef.convertVector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
-        self.initial_sed, self.initial_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
+        self.true_sed, self.true_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
         # if self.vis[0] == True:
             # reef.core.initialSetting(size=(8,2.5), size2=(8,3.5)) # View initial parameters
         reef.run_to_time(self.simtime,showtime=100.)
@@ -99,8 +102,9 @@ class MCMC():
         ax1.set_facecolor('#f2f2f3')
         ax1.set_xlabel('%s' % self.var1_title)
         ax1.set_ylabel('Likelihood')
-        ax1.set_xlim(X.min(), X.max())
         ax1.plot(X,Y)
+        ax1.set_xlim(X.min(), X.max())
+        fig.tight_layout()
         plt.savefig('%s/1dsurf.png'% (fname), bbox_inches='tight', dpi=300, transparent=False)
         plt.clf()
 
@@ -189,12 +193,25 @@ class MCMC():
                 outfile.write('\n')
         return
 
-    def probabilisticLikelihood(self, reef, core_data, input_v):
+    def createData(self,sim_data, sim_timelay):
+        synth_data = np.zeros((sim_data.shape))
+        with file('%s/data_timestructure.txt' % (self.filename),'wb') as outfile:
+            for h in range(sim_timelay.shape[0]):
+                rev = -1-h
+                outfile.write('{0}\t'.format(sim_timelay[h]))
+                for c in range(self.communities+1):
+                    data_str = str(sim_data[h,c])
+                    outfile.write('{0}\t'.format(data_str))
+                outfile.write('\n')
+        return
+
+    def likelihoodWithPropn(self, reef, core_data, input_v):
         sim_propn, sim_timelay = self.run_Model(reef, input_v)
         print 'sim_propn', sim_propn[:20,:]
         intervals = sim_propn.shape[0]
         # # Uncomment if noisy synthetic data is required.
         # self.NoiseToData(intervals,sim_propn)
+        # # Uncomment if data creation is required.
         # self.createData(sim_propn,sim_timelay)
         log_core = np.log(sim_propn+0.0001)
         print 'log_core',log_core[:20,:]
@@ -208,24 +225,7 @@ class MCMC():
         rmse = self.rmse(sim_propn, core_data)
         return [likelihood, sim_propn, diff, rmse]
 
-    # def likelihood_func(self, reef, core_data, input_v):
-    #     pred_core = self.run_Model(reef, input_v)
-    #     pred_core = pred_core.T
-    #     pred_core_w_noise = np.zeros((pred_core.shape[0], pred_core.shape[1]))
-    #     intervals = pred_core.shape[0]
-    #     for n in range(intervals):
-    #        pred_core_w_noise[n,:] = np.random.multinomial(1000,pred_core[n],size=1)
-    #     pred_core_w_noise = pred_core_w_noise/1000
-    #     z = np.zeros((intervals,self.communities+1))  
-    #     z = pred_core_w_noise * core_data
-    #     loss = np.log(z)
-    #     loss[loss == -inf] = 0
-    #     loss = np.sum(loss)
-    #     diff = self.diff_score(pred_core_w_noise,core_data, intervals)
-    #     loss = np.exp(loss)
-    #     return [loss, pred_core_w_noise, diff]
-
-    def deterministicLikelihood(self, reef, core_data, input_v):
+    def likelihoodWithDominance(self, reef, core_data, input_v):
         sim_data, sim_timelay = self.run_Model(reef, input_v)
         # sim_data = sim_data.T
         intervals = sim_data.shape[0]
@@ -241,9 +241,9 @@ class MCMC():
         rmse = self.rmse(sim_data, core_data)
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
-        l1 = np.log(z)
-        l2 = l1
-        likelihood = np.exp(l2)
+        likelihood = np.log(z)
+        # l1 = likelihood
+        # likelihood = np.exp(l1)
         return [np.sum(likelihood), sim_data, diff, rmse]
                
     def likelihood_surface(self):
@@ -269,16 +269,16 @@ class MCMC():
         #Define min/max of parameter of interest 
         p1_v1 = self.min_v
         p2_v1 = self.max_v
-        print 'p1_v1', p1_v1, 'p2_v1', p2_v1
         # Set number and value of iterates
-        s_v1 = np.linspace(p1_v1, p2_v1, num=samples, endpoint=False)
-        
+        s_v1 = np.linspace(p1_v1, p2_v1, num=samples, endpoint=True)
+        print 's_v1', s_v1
         # Create storage for data
         dimx = s_v1.shape[0]
         pos_likl = np.zeros(dimx)
         pos_v1 = np.zeros(samples) 
         pos_diff = np.zeros(samples)
         pos_rmse = np.zeros(samples)
+        
 
         start = time.time()
         i = 0
@@ -291,13 +291,22 @@ class MCMC():
             # USER DEFINED: Substitute generated variables into proposal vector 
             flow4[assemblage-1] = p_v1
             
-
             # Proposal to be passed to runModel
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
             v_proposal = np.append(v_proposal,(ax,ay,m))
-            [likelihood, pred_data, diff, rmse] = self.deterministicLikelihood(reef, self.core_data, v_proposal)
+            [likelihood, pred_data, diff, rmse] = self.likelihoodWithDominance(reef, self.core_data, v_proposal)
             print 'Likelihood:', likelihood, 'and difference score:', diff
-
+            # timeCarb, pop, names = reef.plot.getTimePlotParameters()
+            # print 'timeCarb', timeCarb
+            # print 'pop',  pop.shape
+            # pop = pop.T
+            # print 'pop', pop.shape
+            # np.savetxt('%s/timecarb.txt' % self.filename, timeCarb)
+            # with file(('%s/pop.txt' % self.filename), 'wb') as outfile: 
+            #     for s in range(len(pop)):
+            #         for a in range(3):
+            #             outfile.write('{0}\t'.format(pop[s,a]))
+            #         outfile.write('\n')
             pos_v1[i] = p_v1
             pos_likl[i] = likelihood
             pos_diff[i] = diff
@@ -314,7 +323,6 @@ class MCMC():
 
 def main():
     random.seed(time.time())
-
     #    Set all input parameters    #
     title = ['Shallow', 'Mod-deep', 'Deep'] 
     sed1=[0.0009, 0.0015, 0.0023]
@@ -329,7 +337,7 @@ def main():
     flowlim = [0.,0.3]
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 1000
+    samples= 300
     assemblage= 2
     v1_title = r'$f_{flow}^4$'
     v1 = 'Hydrodynamic energy threshold, %s assemblage (%s)' % (title[assemblage-1],v1_title)
@@ -347,26 +355,27 @@ def main():
     # min_v = sed3[assemblage-1]
     # max_v = sedlim[1]
 
-    description = 'Likelihood surface: %s' % (v1)
+    description = '1D likelihood surface, %s' % v1
+    description2 = 'self.likelihoodWithDominance'
     nCommunities = 3
     simtime = 8500
     timestep = np.arange(0,simtime+1,50)
     xmlinput = 'input_synth.xml'
-    datafile = 'data/data_timestructure_08_vec.txt'
-    core_depths, data_vec = np.genfromtxt(datafile, usecols=(0, 1), unpack = True) 
-    synth_data = 'data/data_timestructure_08.txt'
-    core_data = np.loadtxt(synth_data, usecols=(1,2,3,4))
-    core_time = np.loadtxt(synth_data, usecols=(0))
-    
-    vis = [False, False] # first for initialisation, second for cores
+    core_depths = np.genfromtxt('data/synthdata_d_vec.txt', usecols=(0), unpack=True)
+    synth_data = 'data/synthdata_t_prop_08_2.txt'
+    core_data = np.loadtxt(synth_data, usecols=(1,2,3,4))    
+    synth_vec = 'data/synthdata_t_vec_08_2.txt'
+    core_time, data_vec = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
+
+    vis = [False, False]
     sedsim, flowsim = True, True
-    
+
     run_nb = 0
-    while os.path.exists('1dsurf_thres_%s' % (run_nb)):
+    while os.path.exists('1dsurf_glv_%s' % (run_nb)):
         run_nb+=1
-    if not os.path.exists('1dsurf_thres_%s' % (run_nb)):
-        os.makedirs('1dsurf_thres_%s' % (run_nb))
-    filename = ('1dsurf_thres_%s' % (run_nb))
+    if not os.path.exists('1dsurf_glv_%s' % (run_nb)):
+        os.makedirs('1dsurf_glv_%s' % (run_nb))
+    filename = ('1dsurf_glv_%s' % (run_nb))
 
     #    Save File of Run Description   #
     if not os.path.isfile(('%s/description.txt' % (filename))):
@@ -374,6 +383,7 @@ def main():
             outfile.write('Filename : {0}'.format(os.path.basename(__file__)))
             outfile.write('\nTest Description: ')
             outfile.write(description)
+            outfile.write(description2)
             outfile.write('\nSamples: {0}'.format(samples))
             
 
