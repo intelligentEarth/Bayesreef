@@ -39,26 +39,30 @@ c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
-    def __init__(self, simtime, samples, communities, core_data, core_depths,data_vec, timestep,filename, 
-        xmlinput, sedsim, sedlim, flowsim, flowlim, min_v, max_v, assemblage, vis, description,
-        v1, v1_title):
+    def __init__(self, filename, xmlinput, simtime, samples, communities, sedsim, sedlim, flowsim, flowlim, vis,
+        gt_depths, gt_timelay, gt_vec_t, gt_prop_t, min_v, max_v, assemblage, description,v1, v1_title):
+        
         self.font = 10
         self.width = 1
+        self.colors = terrain(np.linspace(0, 1.8, 14)) #len(reef.core.coralH)+10))
+        self.colors2 = plasma(np.linspace(0, 1, 174)) #len(reef.core.layTime)+3))
+        self.d_sedprop = float(np.count_nonzero(gt_prop_t[:,communities]))/gt_prop_t.shape[0]
+        
         self.filename = filename
         self.input = xmlinput
+        self.simtime = simtime
+        self.samples = samples
         self.communities = communities
-        self.samples = samples   
-        self.core_data = core_data
-        self.core_depths = core_depths
-        self.data_vec = data_vec
-        self.timestep = timestep
-        self.vis = vis
         self.sedsim = sedsim
-        self.flowsim = flowsim
         self.sedlim = sedlim
         self.flowlim = flowlim
-        self.simtime = simtime
-        self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
+        self.flowsim = flowsim
+        self.vis = vis   
+        
+        self.gt_depths = gt_depths
+        self.gt_timelay = gt_timelay
+        self.gt_prop_t = gt_prop_t
+        self.gt_vec_t = gt_vec_t
         
         self.true_sed = []
         self.true_flow = []
@@ -73,29 +77,166 @@ class MCMC():
         self.var1= v1
         self.var1_title = v1_title
 
-    def run_Model(self, reef, input_vector):
+
+    def runModel(self, reef, input_vector):
         reef.convertVector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
         self.true_sed, self.true_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
         # if self.vis[0] == True:
             # reef.core.initialSetting(size=(8,2.5), size2=(8,3.5)) # View initial parameters
         reef.run_to_time(self.simtime,showtime=100.)
         # if self.vis[1] == True:
-        #     from matplotlib.cm import terrain, plasma
-        #     nbcolors = len(reef.core.coralH)+10
-        #     colors = terrain(np.linspace(0, 1.8, nbcolors))
-        #     nbcolors = len(reef.core.layTime)+3
-        #     colors2 = plasma(np.linspace(0, 1, nbcolors))
-        #     reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=300)
+        #     reef.plot.drawCore(lwidth = 3, colsed=self.colors, coltime = self.colors2, size=(9,8), font=8, dpi=300)
         sim_output, sim_timelay = reef.plot.convertTimeStructure() #modelPlot.py
         return sim_output, sim_timelay
+    
+    def convertCoreFormat(self, core):
+        vec = np.zeros(core.shape[0])
+        for n in range(len(vec)):
+            if not all(v == 0 for v in core[n,:]):
+                idx = np.argmax(core[n,:])# get index,
+                vec[n] = idx+1 # +1 so that zero is preserved as 'none'
+            else:
+                vec[n] = 5.
+        return vec
 
+    def diffScore(self, sim_data,synth_data,intervals):
+        maxprop = np.zeros((intervals,sim_data.shape[1]))
+        for n in range(intervals):
+            idx_synth = np.argmax(synth_data[n,:])
+            idx_sim = np.argmax(sim_data[n,:])
+            if ((sim_data[n,self.communities] != 1.) and (idx_synth == idx_sim)): #where sediment !=1 and max proportions are equal:
+                maxprop[n,idx_synth] = 1
+        diff = (1- float(np.count_nonzero(maxprop))/intervals)*100
+        return diff
+
+    def rmse(self, sim, obs):
+        # where there is 1 in the sed column, count
+        sed = np.count_nonzero(sim[:,self.communities])
+        p_sedprop = (float(sed)/sim.shape[0])
+        sedprop = np.absolute((self.d_sedprop - p_sedprop)*0.5)
+        rmse =(np.sqrt(((sim - obs) ** 2).mean()))*0.5
+        return rmse + sedprop
+
+    def modelOutputParameters(self, prop_t, vec_t, timelay):
+
+        n = timelay.size # no. of data points in gt output #171
+        s = 1
+        cpts = np.zeros(n)# (171,)
+        cpts[0] = timelay[0]
+        ca_props = np.zeros((n, prop_t.shape[1]))# (171,5)
+        
+        for i in range(1,n):
+            if vec_t[i] != vec_t[i-1]:
+                cpts[s] = timelay[i-1]
+                ca_props[s-1] = prop_t[i-1,:]
+                s += 1
+            if i == n-1:
+                cpts[s] = timelay[i]
+                ca_props[s-1] = prop_t[i,:]
+        S = s
+        cpts = np.trim_zeros(cpts, 'b') # append a zero on the end afterwards
+        ca_props = ca_props[0:S,:]
+        return S, cpts, ca_props
+
+    def noGrowthColumn(self, sim_prop):
+        # Creates additional binary column that takes a value of 1 where there is no growth, otherwise 0.
+        v_nogrowth = np.zeros((sim_prop.shape[0],1))
+        for a in range(sim_prop.shape[0]):
+            if np.amax(sim_prop[a,:]) == 0.:
+                v_nogrowth[a,:] = 1.
+        sim_prop = np.append(sim_prop,v_nogrowth,axis=1)
+        return sim_prop
+
+    def likelihoodWithDependence(self,reef, input_v, S_star, cpts_star, ca_props_star):
+        """
+        (1) compute the number of segments (S)
+        (2) compute the location of the cutpoints (xi) 
+        (3) find the proportion in the segment (ca_props)
+        """
+        sim_prop_t, sim_timelay = self.runModel(reef, input_v)
+        # sim_vec_d = self.convertCoreFormat(sim_prop_d.T)
+        sim_vec_t = self.convertCoreFormat(sim_prop_t)
+        sim_prop_t5 = self.noGrowthColumn(sim_prop_t)
+
+        # Counting segments, recording location of cutpoints and associated cagal assemblage proportions
+        print 'S_star',S_star, '\n cpts_star',cpts_star,'\n ca_props_star props', ca_props_star
+        S, cpts, ca_props = self.modelOutputParameters(sim_prop_t5,sim_vec_t,sim_timelay)
+        print 's',S, '\n cpts',cpts,'\n ca props', ca_props
+        # First reject if number of segments in sim != S_star
+        if S != S_star:
+            likelihood=0
+            diff = 100
+            rmse = 100
+            return [likelihood, diff, rmse, sim_prop_t5]
+        # Likelihood for cutpoints conditional on S_star
+        likl_cpts_star = np.zeros(S_star)
+        for j in range(S_star):
+            if j == 0:
+                distance = cpts[j+1]-cpts[j]
+            else:
+                distance = min((cpts[j+1]-cpts[j]),(cpts[j]-cpts[j-1]))
+            likl_cpts_star[j] = stats.norm.pdf(cpts_star[j],cpts[j],float(distance)/2.)
+        likl_cpts_star = np.ma.masked_invalid(likl_cpts_star)
+        print 'likl_cpts_star:',likl_cpts_star
+        like_all_cpts_star = np.prod(likl_cpts_star) #correct product after removing NaNs
+        print 'like_all_cpts_star:',like_all_cpts_star
+        # Multinomial likelihood - a product of the no. of segments
+        likl_ca_prop= np.zeros((S_star,5))
+        for k in range(S_star):
+            likl_ca_prop[k,:] = np.random.multinomial(1,ca_props[k,:],size=1)
+        print 'likl_ca_prop', likl_ca_prop
+        likl_ca_prop = (likl_ca_prop*100)+1
+        like_all_coral = np.prod(likl_ca_prop)
+        total_likelihood = like_all_cpts_star*like_all_coral
+        
+        diff = self.diffScore(sim_prop_t5,self.gt_prop_t, sim_timelay.size)
+        rmse= self.rmse(sim_prop_t5, self.gt_prop_t)
+        return [total_likelihood, diff, rmse, sim_prop_t]
+
+
+    def likelihoodWithProps(self, reef, gt_prop_t, input_v):
+        sim_prop_t, sim_timelay = self.runModel(reef, input_v)
+        sim_prop_t5 = self.noGrowthColumn(sim_prop_t)
+        intervals = sim_prop_t5.shape[0]
+        # # Uncomment if noisy synthetic data is required.
+        # self.NoiseToData(intervals,sim_prop_t5)
+        log_core = np.log(sim_prop_t5+0.0001)
+        log_core[log_core == -inf] = 0
+        z = log_core * gt_prop_t
+        likelihood = np.sum(z)
+        diff = self.diffScore(sim_prop_t5,gt_prop_t, intervals)
+        rmse = self.rmse(sim_prop_t5, gt_prop_t)
+        # sim_vec_t = self.convertCoreFormat(sim_prop_t5)
+        # sim_vec_d = self.convertCoreFormat(sim_prop_d.T)
+        return [likelihood, diff, rmse, sim_prop_t5]
+           
+    def likelihoodWithDominance(self, reef, gt_prop_t, input_v):
+        sim_data_t, sim_timelay = self.runModel(reef, input_v)
+        sim_data_t5 = self.noGrowthColumn(sim_data_t)
+        intervals = sim_data_t5.shape[0]
+        z = np.zeros((intervals,sim_data_t5.shape[1]))    
+        for n in range(intervals):
+            idx_data = np.argmax(gt_prop_t[n,:])
+            idx_model = np.argmax(sim_data_t5[n,:])
+            if ((sim_data_t5[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
+                z[n,idx_data] = 1
+        diff = 1. - (float(np.count_nonzero(z))/intervals)# Difference score calculation
+        z = z + 0.1
+        z = z/(1+(1+self.communities)*0.1)
+        log_z = np.log(z)
+        likelihood = np.sum(log_z)
+        rmse = self.rmse(sim_data_t5, gt_prop_t)
+        # sim_vec_t = self.convertCoreFormat(sim_data_t5)
+        # sim_vec_d = self.convertCoreFormat(sim_data_d.T)
+        return [likelihood, diff, rmse, sim_data_t5]
+               
     def plotFunctions(self, fname, v1, likelihood, diff, rmse):
 
         font = self.font
         width = self.width
         X = v1
         Y = likelihood
-        print 'X shape ', X.shape, 'Y shape ', Y.shape
+        print 'X shape: ', X.shape, 'Y shape: ', Y.shape
         fig = plt.figure(figsize=(6,4))
         ax1 = fig.add_subplot(111)
         ax1.set_title('%s' % self.description, fontsize= font+2)#, y=1.02)
@@ -116,8 +257,8 @@ class MCMC():
         plt.ylabel("Difference", size=self.font+1)
         plt.xlabel('%s' % self.var1_title)
         plt.xlim(X.min(), X.max())
-        fig.tight_layout()
         plt.savefig('%s/diff_evol.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
+        fig.tight_layout()
         plt.clf()
 
         fig = plt.figure(figsize=(6,4))
@@ -128,8 +269,8 @@ class MCMC():
         plt.ylabel("RMSE", size=self.font+1)
         plt.xlabel('%s' % self.var1_title)
         plt.xlim(X.min(), X.max())
-        fig.tight_layout()
         plt.savefig('%s/rmse_evol.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
+        fig.tight_layout()
         plt.clf()
 
     def save_params(self, var1, likl, diff, rmse):    
@@ -146,29 +287,26 @@ class MCMC():
                 data = [var1, likl, diff, rmse]
                 writer.writerow(data)
 
-    def diff_score(self, sim_data,synth_data,intervals):
-        maxprop = np.zeros((intervals,self.communities+1))
-        for n in range(intervals):
-            idx_synth = np.argmax(synth_data[n,:])
-            idx_sim = np.argmax(sim_data[n,:])
-            if ((sim_data[n,self.communities] != 1.) and (idx_synth == idx_sim)): #where sediment !=1 and max proportions are equal:
-                maxprop[n,idx_synth] = 1
-        same= np.count_nonzero(maxprop)
-        same = float(same)/intervals
-        diff = 1-same
-        return diff*100
+    def saveCore(self,reef,naccept):
+        path = '%s/%s' % (self.filename, naccept)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        
+        #     Initial settings     #
+        reef.core.initialSetting(size=(8,2.5), size2=(8,4.5), dpi=300, fname='%s/a_thres_%s_' % (path, naccept))        
+        #      Community population evolution    #
+        reef.plot.speciesDepth(colors=self.colors, size=(8,4), font=8, dpi=300, fname =('%s/b_popd_%s.png' % (path,naccept)))
+        reef.plot.speciesTime(colors=self.colors, size=(8,4), font=8, dpi=300,fname=('%s/c_popt_%s.png' % (path,naccept)))
+        reef.plot.accomodationTime(size=(8,4), font=8, dpi=300, fname =('%s/d_acct_%s.pdf' % (path,naccept)))
+        
+        #      Draw core      #
+        reef.plot.drawCore(lwidth = 3, colsed=self.colors, coltime = self.colors2, size=(9,8), font=8, dpi=300, 
+                           figname=('%s/e_core_%s' % (path, naccept)), filename=('%s/core_%s.csv' % (path, naccept)), sep='\t')
+        return
 
-    def rmse(self, sim, obs):
-        # where there is 1 in the sed column, count
-        sed = np.count_nonzero(sim[:,self.communities])
-        p_sedprop = (float(sed)/sim.shape[0])
-        sedprop = np.absolute((self.d_sedprop - p_sedprop)*0.5)
-        rmse =(np.sqrt(((sim - obs) ** 2).mean()))*0.5
-        return rmse + sedprop
-    
     def NoiseToData(self,intervals,sim_data):
         # Function to add noise to simulated data to create synthetic core data with noise.
-        synth_data = self.core_data #np.full((sim_data.shape[0],sim_data.shape[1]),100)
+        synth_data = self.gt_prop_t #np.full((sim_data.shape[0],sim_data.shape[1]),100)
         list_cutpoints = []
         for n in range(1,intervals):
             a = np.argmax(sim_data[n])
@@ -186,7 +324,7 @@ class MCMC():
         with file('%s/data_probstic.txt' % (self.filename),'wb') as outfile:
             for h in range(intervals):
                 rev = -1-h
-                outfile.write('{0}\t'.format(self.core_depths[h]))
+                outfile.write('{0}\t'.format(self.gt_depths[h]))
                 for c in range(self.communities+1):
                     data_str = str(synth_data[h,c])
                     outfile.write('{0}\t'.format(data_str))
@@ -205,47 +343,6 @@ class MCMC():
                 outfile.write('\n')
         return
 
-    def likelihoodWithPropn(self, reef, core_data, input_v):
-        sim_propn, sim_timelay = self.run_Model(reef, input_v)
-        print 'sim_propn', sim_propn[:20,:]
-        intervals = sim_propn.shape[0]
-        # # Uncomment if noisy synthetic data is required.
-        # self.NoiseToData(intervals,sim_propn)
-        # # Uncomment if data creation is required.
-        # self.createData(sim_propn,sim_timelay)
-        log_core = np.log(sim_propn+0.0001)
-        print 'log_core',log_core[:20,:]
-        log_core[log_core == -inf] = 0
-        print 'log core w no inf', log_core[:20,:]
-        z = log_core * core_data
-        print 'z', z
-        likelihood = np.sum(z)
-        print 'likelihood:', likelihood
-        diff = self.diff_score(sim_propn,core_data, intervals)
-        rmse = self.rmse(sim_propn, core_data)
-        return [likelihood, sim_propn, diff, rmse]
-
-    def likelihoodWithDominance(self, reef, core_data, input_v):
-        sim_data, sim_timelay = self.run_Model(reef, input_v)
-        # sim_data = sim_data.T
-        intervals = sim_data.shape[0]
-        z = np.zeros((intervals,self.communities+1))    
-        for n in range(intervals):
-            idx_data = np.argmax(core_data[n,:])
-            idx_model = np.argmax(sim_data[n,:])
-            if ((sim_data[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
-                z[n,idx_data] = 1
-        same = np.count_nonzero(z)
-        same = float(same)/intervals
-        diff = 1-same
-        rmse = self.rmse(sim_data, core_data)
-        z = z + 0.1
-        z = z/(1+(1+self.communities)*0.1)
-        likelihood = np.log(z)
-        # l1 = likelihood
-        # likelihood = np.exp(l1)
-        return [np.sum(likelihood), sim_data, diff, rmse]
-               
     def likelihood_surface(self):
     	samples = self.samples
     	assemblage = self.assemblage
@@ -271,7 +368,7 @@ class MCMC():
         p2_v1 = self.max_v
         # Set number and value of iterates
         s_v1 = np.linspace(p1_v1, p2_v1, num=samples, endpoint=True)
-        print 's_v1', s_v1
+        print 'Vector of all iterates:', s_v1
         # Create storage for data
         dimx = s_v1.shape[0]
         pos_likl = np.zeros(dimx)
@@ -289,29 +386,20 @@ class MCMC():
 
 
             # USER DEFINED: Substitute generated variables into proposal vector 
-            flow4[assemblage-1] = p_v1
+            flow1[assemblage-1] = p_v1
             
             # Proposal to be passed to runModel
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
             v_proposal = np.append(v_proposal,(ax,ay,m))
-            [likelihood, pred_data, diff, rmse] = self.likelihoodWithDominance(reef, self.core_data, v_proposal)
+            S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
+            [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
             print 'Likelihood:', likelihood, 'and difference score:', diff
-            # timeCarb, pop, names = reef.plot.getTimePlotParameters()
-            # print 'timeCarb', timeCarb
-            # print 'pop',  pop.shape
-            # pop = pop.T
-            # print 'pop', pop.shape
-            # np.savetxt('%s/timecarb.txt' % self.filename, timeCarb)
-            # with file(('%s/pop.txt' % self.filename), 'wb') as outfile: 
-            #     for s in range(len(pop)):
-            #         for a in range(3):
-            #             outfile.write('{0}\t'.format(pop[s,a]))
-            #         outfile.write('\n')
             pos_v1[i] = p_v1
             pos_likl[i] = likelihood
             pos_diff[i] = diff
             pos_rmse[i] = rmse
             self.save_params(pos_v1[i], pos_likl[i], pos_diff[i], pos_rmse[i])
+            # self.saveCore(reef,i)
             i += 1
 
         end = time.time()
@@ -324,6 +412,11 @@ class MCMC():
 def main():
     random.seed(time.time())
     #    Set all input parameters    #
+
+    # USER DEFINED: parameter names and plot titles.
+    samples= 10
+    assemblage= 3
+
     title = ['Shallow', 'Mod-deep', 'Deep'] 
     sed1=[0.0009, 0.0015, 0.0023]
     sed2=[0.0015, 0.0017, 0.0024]
@@ -336,46 +429,59 @@ def main():
     sedlim = [0., 0.005]
     flowlim = [0.,0.3]
 
-    # USER DEFINED: parameter names and plot titles.
-    samples= 300
-    assemblage= 2
-    v1_title = r'$f_{flow}^4$'
+    v1_title = r'$f_{flow}^1$'
     v1 = 'Hydrodynamic energy threshold, %s assemblage (%s)' % (title[assemblage-1],v1_title)
-    title[assemblage-1]
+    
+    min_v = flowlim[0]
+    max_v = flow2[assemblage-1]
+
+    # min_v = flow1[assemblage-1]
+    # max_v = flow3[assemblage-1]
+
     # min_v = flow2[assemblage-1]
     # max_v = flow4[assemblage-1]
-    min_v = flow3[assemblage-1]
-    max_v = flowlim[1]
-    # min_v = flowlim[0]
-    # max_v = flow2[assemblage-1]
 
+    # min_v = flow3[assemblage-1]
+    # max_v = flowlim[1]
 
     # v1_title = r'$f_{sed}^3$'
     # v1 = 'Sediment exposure threshold: %s assemblage (%s)' % (title[assemblage-1], v1_title)
+    
+    # min_v = sedlim[0]
+    # max_v = sed2[assemblage-1]
+
+    # min_v = sed1[assemblage-1]
+    # max_v = sed3[assemblage-1]
+
+    # min_v = sed2[assemblage-1]
+    # max_v = sed4[assemblage-1]
+
     # min_v = sed3[assemblage-1]
     # max_v = sedlim[1]
 
-    description = '1D likelihood surface, %s' % v1
-    description2 = 'self.likelihoodWithDominance'
+    description = '1D likelihood surface: %s %s' % (title[assemblage-1],v1_title)
+    description2 = 'self.likelihoodWithDependence'
     nCommunities = 3
     simtime = 8500
-    timestep = np.arange(0,simtime+1,50)
     xmlinput = 'input_synth.xml'
-    core_depths = np.genfromtxt('data/synthdata_d_vec.txt', usecols=(0), unpack=True)
-    synth_data = 'data/synthdata_t_prop_08_2.txt'
-    core_data = np.loadtxt(synth_data, usecols=(1,2,3,4))    
-    synth_vec = 'data/synthdata_t_vec_08_2.txt'
-    core_time, data_vec = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
-
+    gt_depths = np.genfromtxt('data/synthdata_d_vec_08.txt', usecols=(0), unpack=True)
+    synth_data = 'data/synthdata_t_prop_08_1.txt'
+    gt_prop_t = np.loadtxt(synth_data, usecols=(1,2,3,4,5))    
+    synth_vec = 'data/synthdata_t_vec_08_1.txt'
+    gt_timelay, gt_vec_t = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True) 
+    gt_timelay = gt_timelay[::-1]
     vis = [False, False]
     sedsim, flowsim = True, True
-
+    sedlim = [0., 0.005]
+    flowlim = [0.,0.3]
+    
     run_nb = 0
-    while os.path.exists('1dsurf_glv_%s' % (run_nb)):
+    path_name = 'results-1d-thres'
+    while os.path.exists('%s_%s' % (path_name, run_nb)):
         run_nb+=1
-    if not os.path.exists('1dsurf_glv_%s' % (run_nb)):
-        os.makedirs('1dsurf_glv_%s' % (run_nb))
-    filename = ('1dsurf_glv_%s' % (run_nb))
+    if not os.path.exists('%s_%s' % (path_name, run_nb)):
+        os.makedirs('%s_%s' % (path_name, run_nb))
+    filename = ('%s_%s' % (path_name, run_nb))
 
     #    Save File of Run Description   #
     if not os.path.isfile(('%s/description.txt' % (filename))):
@@ -387,8 +493,9 @@ def main():
             outfile.write('\nSamples: {0}'.format(samples))
             
 
-    mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, data_vec, timestep,  filename, xmlinput, 
-                sedsim, sedlim, flowsim,flowlim, min_v, max_v, assemblage, vis, description,v1, v1_title)
+    mcmc = MCMC(filename, xmlinput, simtime, samples, nCommunities, sedsim, sedlim, flowsim, flowlim, vis,
+        gt_depths, gt_timelay,gt_vec_t, gt_prop_t, min_v, max_v, assemblage, description,v1, v1_title)
+
     [pos_v1, pos_likl] = mcmc.likelihood_surface()
 
     print 'Successfully sampled'

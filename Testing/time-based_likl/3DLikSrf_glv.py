@@ -40,7 +40,8 @@ plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
     def __init__(self, filename, xmlinput, simtime, samples, communities, sedsim, sedlim, flowsim, flowlim, vis,
-        gt_depths, gt_timelay, gt_vec_t, gt_prop_t, min_v, max_v, assemblage, description,v1, v1_title):
+        gt_depths, gt_timelay, gt_vec_t, gt_prop_t, v1_min, v1_max, v2_min, v2_max, assemblage, description,
+        v1, v1_title, v2, v2_title):
         
         self.font = 10
         self.width = 1
@@ -69,13 +70,17 @@ class MCMC():
         self.true_m = 0.08
         self.true_ax = -0.01
         self.true_ay = -0.03
-        self.min_v = min_v
-        self.max_v = max_v
         
         self.assemblage = assemblage
         self.description = description
         self.var1= v1
+        self.var2 = v2
+        self.v1_min = v1_min
+        self.v1_max = v1_max
+        self.v2_min = v2_min
+        self.v2_max = v2_max
         self.var1_title = v1_title
+        self.var2_title = v2_title
 
 
     def runModel(self, reef, input_vector):
@@ -230,123 +235,86 @@ class MCMC():
         # sim_vec_d = self.convertCoreFormat(sim_data_d.T)
         return [likelihood, diff, rmse, sim_data_t5]
                
-    def plotFunctions(self, fname, v1, likelihood, diff, rmse):
+    def plotFunctions(self, fname, v1, v2, likelihood):
 
         font = self.font
         width = self.width
         X = v1
-        Y = likelihood
-        print 'X shape: ', X.shape, 'Y shape: ', Y.shape
-        fig = plt.figure(figsize=(6,4))
-        ax1 = fig.add_subplot(111)
-        ax1.set_title('%s' % self.description, fontsize= font+2)#, y=1.02)
-        ax1.set_facecolor('#f2f2f3')
-        ax1.set_xlabel('%s' % self.var1_title)
-        ax1.set_ylabel('Likelihood')
-        ax1.plot(X,Y)
-        ax1.set_xlim(X.min(), X.max())
-        fig.tight_layout()
-        plt.savefig('%s/1dsurf.png'% (fname), bbox_inches='tight', dpi=300, transparent=False)
-        plt.clf()
+        Y = v2
+        # R = X/Y
+        X, Y = np.meshgrid(X, Y)
+        Z = likelihood
 
-        fig = plt.figure(figsize=(6,4))
-        ax= fig.add_subplot(111)
-        ax.set_facecolor('#f2f2f3')
-        plt.plot(v1,diff)
-        plt.title("Difference score evolution", size=self.font+2)
-        plt.ylabel("Difference", size=self.font+1)
-        plt.xlabel('%s' % self.var1_title)
-        plt.xlim(X.min(), X.max())
-        plt.savefig('%s/diff_evol.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
-        fig.tight_layout()
-        plt.clf()
+        surf = go.Surface(
+            x=X, 
+            y=Y, 
+            z=Z,
+            colorscale='Viridis'
+            # mode='markers',
+            # marker=dict(
+            #     size=12, 
+            #     color=Z, 
+            #     colorscale='Viridis',
+            #     opacity=0.8,
+            #     showscale=True
+            #     )
+            )
+        data = [surf]
+        layout = go.Layout(
+            title='%s' % self.description,
+            autosize=True,
+            width=1000,
+            height=1000,
+            scene=Scene(
+                xaxis=XAxis(
+                    title='%s' % self.var1_title,
+                    nticks=10,
+                    gridcolor='rgb(255, 255, 255)',
+                    gridwidth=2,
+                    zerolinecolor='rgb(255, 255, 255)',
+                    zerolinewidth=2
+                    ),
+                yaxis=YAxis(
+                    title='%s' % self.var2_title,
+                    nticks=10,
+                    gridcolor='rgb(255, 255, 255)',
+                    gridwidth=2,
+                    zerolinecolor='rgb(255, 255, 255)',
+                    zerolinewidth=2
+                    ),
+                zaxis=ZAxis(
+                    title='Likelihood'
+                    ),
+                bgcolor="rgb(244, 244, 248)"
+                )
+            )
 
-        fig = plt.figure(figsize=(6,4))
-        ax= fig.add_subplot(111)
-        ax.set_facecolor('#f2f2f3')
-        plt.plot(v1,rmse)
-        plt.title("RMSE evolution", size=self.font+2)
-        plt.ylabel("RMSE", size=self.font+1)
-        plt.xlabel('%s' % self.var1_title)
-        plt.xlim(X.min(), X.max())
-        plt.savefig('%s/rmse_evol.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
-        fig.tight_layout()
-        plt.clf()
+        fig = go.Figure(data=data, layout=layout)
+        graph=plotly.offline.plot(fig, 
+            auto_open=False, 
+            output_type='file',
+            filename= '%s/3d-likelihood-surface.html' % (self.filename),
+            validate=False
+            )
 
-    def save_params(self, var1, likl, diff, rmse):    
+    def save_params(self, v1, v2, likl, diff, rmse):    
         ### SAVE RECORD OF ACCEPTED PARAMETERS ###  
         if not os.path.isfile(('%s/data.csv' % (self.filename))):
             with file(('%s/data.csv' % (self.filename)),'wb') as outfile:
                 writer = csv.writer(outfile, delimiter=',')
-                writer.writerow(["Var", "Likl", "Diff", "RMSE"])
-                data = [var1, likl, diff, rmse]
+                data = [v1, v2, likl, diff, rmse]
                 writer.writerow(data)
         else:
             with file(('%s/data.csv' % (self.filename)),'ab') as outfile:
                 writer = csv.writer(outfile, delimiter=',')
-                data = [var1, likl, diff, rmse]
+                data = [v1, v2, likl, diff, rmse]
                 writer.writerow(data)
 
-    def saveCore(self,reef,naccept):
-        path = '%s/%s' % (self.filename, naccept)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        
-        #     Initial settings     #
-        reef.core.initialSetting(size=(8,2.5), size2=(8,4.5), dpi=300, fname='%s/a_thres_%s_' % (path, naccept))        
-        #      Community population evolution    #
-        reef.plot.speciesDepth(colors=self.colors, size=(8,4), font=8, dpi=300, fname =('%s/b_popd_%s.png' % (path,naccept)))
-        reef.plot.speciesTime(colors=self.colors, size=(8,4), font=8, dpi=300,fname=('%s/c_popt_%s.png' % (path,naccept)))
-        reef.plot.accomodationTime(size=(8,4), font=8, dpi=300, fname =('%s/d_acct_%s.pdf' % (path,naccept)))
-        
-        #      Draw core      #
-        reef.plot.drawCore(lwidth = 3, colsed=self.colors, coltime = self.colors2, size=(9,8), font=8, dpi=300, 
-                           figname=('%s/e_core_%s' % (path, naccept)), filename=('%s/core_%s.csv' % (path, naccept)), sep='\t')
-        return
-
-    def NoiseToData(self,intervals,sim_data):
-        # Function to add noise to simulated data to create synthetic core data with noise.
-        synth_data = self.gt_prop_t #np.full((sim_data.shape[0],sim_data.shape[1]),100)
-        list_cutpoints = []
-        for n in range(1,intervals):
-            a = np.argmax(sim_data[n])
-            b = np.argmax(sim_data[n-1])
-            if not (a == b):
-                list_cutpoints = np.append(list_cutpoints, n)
-                print 'list', list_cutpoints
-        for idx, val in enumerate(list_cutpoints):
-            print 'val', val
-            for x in range(int(val-2),int(val+3)):
-                print 'x',x
-                synth_data[x,:] = np.random.multinomial(1, sim_data[x], size=1)
-        print 'synth_data', synth_data
-
-        with file('%s/data_probstic.txt' % (self.filename),'wb') as outfile:
-            for h in range(intervals):
-                rev = -1-h
-                outfile.write('{0}\t'.format(self.gt_depths[h]))
-                for c in range(self.communities+1):
-                    data_str = str(synth_data[h,c])
-                    outfile.write('{0}\t'.format(data_str))
-                outfile.write('\n')
-        return
-
-    def createData(self,sim_data, sim_timelay):
-        synth_data = np.zeros((sim_data.shape))
-        with file('%s/data_timestructure.txt' % (self.filename),'wb') as outfile:
-            for h in range(sim_timelay.shape[0]):
-                rev = -1-h
-                outfile.write('{0}\t'.format(sim_timelay[h]))
-                for c in range(self.communities+1):
-                    data_str = str(sim_data[h,c])
-                    outfile.write('{0}\t'.format(data_str))
-                outfile.write('\n')
-        return
 
     def likelihood_surface(self):
     	samples = self.samples
     	assemblage = self.assemblage
-
+        dimension=samples*samples
         # Declare pyReef-Core and initialize
         reef = Model()
         
@@ -363,76 +331,121 @@ class MCMC():
         ax = self.true_ax
         ay = self.true_ay
 
-        #Define min/max of parameter of interest 
-        p1_v1 = self.min_v
-        p2_v1 = self.max_v
+        #Define min/max of parameter of interest
+        v1_p1 = self.v1_min
+        v1_p2 = self.v1_max
+        v2_p1 = self.v2_min
+        v2_p2 = self.v2_max 
         # Set number and value of iterates
-        s_v1 = np.linspace(p1_v1, p2_v1, num=samples, endpoint=True)
+        s_v1 = np.linspace(v1_p1, v1_p2, num=samples, endpoint=True)
+        s_v2 = np.linspace(v2_p1, v2_p2, num=samples, endpoint=True)
         print 's_v1', s_v1
+        print 's_v2', s_v2
         # Create storage for data
-        dimx = s_v1.shape[0]
-        pos_likl = np.zeros(dimx)
-        pos_v1 = np.zeros(samples) 
-        pos_diff = np.zeros(samples)
-        pos_rmse = np.zeros(samples)
+        pos_likl = np.zeros((s_v1.shape[0],s_v2.shape[0]))
+        pos_v1 = np.zeros(dimension)
+        pos_v2 = np.zeros(dimension) 
+        pos_diff = np.zeros(dimension)
+        pos_rmse = np.zeros(dimension)
         
+        S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
 
         start = time.time()
         i = 0
-        for a in range(len(s_v1)):
-            print 'sample: ', i
-            print '%s:' % self.var1, s_v1[a]
-            p_v1 = s_v1[a] # Update parameters
+        for a in range(s_v1.shape[0]):
+            for b in range(s_v2.shape[0]):
+                print 'sample: ', i
+                print 'Variable 1: ', s_v1[a], 'Variable 2: ', s_v2[b]
+                # Update parameters
+                p_v1 = s_v1[a]
+                p_v2 = s_v2[b]
+
+                # USER DEFINED: Substitute generated variables into proposal vector 
+                m = p_v1
+                ax = p_v2
+                
+                # Proposal to be passed to runModel
+                v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
+                v_proposal = np.append(v_proposal,(ax,ay,m))
+                
+                [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+                print 'Likelihood:', likelihood, 'and difference score:', diff
+                
+
+                pos_v1[i] = p_v1
+                pos_v2[i] = p_v2
+                pos_likl[a,b] = likelihood
+                pos_diff[i] = diff
+                pos_rmse[i] = rmse
+                self.save_params(pos_v1[i], pos_v2[i], pos_likl[a,b], pos_diff[i], pos_rmse[i])
+                # self.saveCore(reef,i)
+                i += 1
+
+                # if b < a:
+                    #     print 'skip likelihood'
+                    #     #set pos_sed 2, pos_v2, pos_likl and pos_diff to -infinity because can't run.
+                    #     pos_diff[i] = np.nan
+                    #     pos_v1[i] = np.nan
+                    #     pos_v2[i] = np.nan
+                    #     pos_likl[a,b] = np.nan
+                    #     self.save_params(pos_v1[i], pos_v2[i], pos_likl[a,b], pos_diff[i])
+
+                    # else:
+                    #     print '\n Variable 1: ', s_v1[a], 'Variable 2: ', s_v2[b]
+
+                    #     # Update parameters
+                    #     p_v1 = s_v1[a]
+                    #     p_v2 = s_v2[b]
 
 
-            # USER DEFINED: Substitute generated variables into proposal vector 
-            ay = p_v1
-            
-            # Proposal to be passed to runModel
-            v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
-            v_proposal = np.append(v_proposal,(ax,ay,m))
-            S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
-            [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
-            print 'Likelihood:', likelihood, 'and difference score:', diff
-            pos_v1[i] = p_v1
-            pos_likl[i] = likelihood
-            pos_diff[i] = diff
-            pos_rmse[i] = rmse
-            self.save_params(pos_v1[i], pos_likl[i], pos_diff[i], pos_rmse[i])
-            # self.saveCore(reef,i)
-            i += 1
+                    #     # Substitute generated variables into proposal vector 
+                    #     flow1[assemblage-1] = p_v1
+                    #     flow2[assemblage-1] = p_v2
+                    #     # print 'sed2', sed2
+                    #     # print 'sed3', sed3
+                        
+                    #     # Proposal to be passed to runModel
+                    #     v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
+                    #     v_proposal = np.append(v_proposal,(ax,ay,m))
+
+                    #     [likelihood, pred_data, diff] = self.likelihood_func(reef, self.core_data, v_proposal)
+                    #     print 'Likelihood:', likelihood, 'and difference score:', diff
+
+                    #     pos_diff[i] = diff
+                    #     pos_v1[i] = p_v1
+                    #     pos_v2[i] = p_v2
+                    #     pos_likl[a,b] = likelihood
+                    #     self.save_params(pos_v1[i], pos_v2[i], pos_likl[a,b], pos_diff[i])
+                    # i += 1
 
         end = time.time()
         total_time = end - start
-        self.plotFunctions(self.filename, s_v1, pos_likl,pos_diff, pos_rmse)
+        self.plotFunctions(self.filename, s_v1, s_v2, pos_likl)
         print 'Counter:', i, '\nTime elapsed:', total_time, '\npos_likl.shape:', pos_likl.shape 
         
-        return (pos_v1, pos_likl)
+        return (pos_v1, pos_v2, pos_likl)
 
 def main():
     random.seed(time.time())
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 300
+    samples= 25
     assemblage= 2
 
-    # v1 = 'Malthusian Parameter'
-    # v1_title = r'$\varepsilon$'
-    # min_v =0.01
-    # max_v = 0.15
+    v1 = 'Malthusian parameter'
+    v1_title = r'$\varepsilon$'
+    v1_min, v1_max = 0., 0.15
     
-    # v1 = 'Main diagonal'
-    # v1_title = r'$\alpha_m$'
-    # min_v =-0.15
-    # max_v = 0
+    v2 = 'Main diagonal'
+    v2_title = 'a_m' #r'{$\alpha_m$}'
+    v2_min, v2_max = -0.15, 0.
 
-    v1 = 'Super-/sub-diagonals'
-    v1_title = r'$\alpha_s$'# r'$\varepsilon$'#r'$\alpha_m$'
-    min_v =-0.15
-    max_v = 0
+    # v2 = 'Sub-/Super-diagonal'
+    # v2_title = 'a_s' #r'{$\alpha_s$}'
+    # v2_min, v2_max = -0.15, 0.
 
-    description = '1D likelihood surface, %s' % v1
+    description = '3D likelihood surface, %s & %s' % (v1, v2)
     description2 = 'self.likelihoodWithDependence'
     nCommunities = 3
     simtime = 8500
@@ -449,7 +462,7 @@ def main():
     flowlim = [0.,0.3]
     
     run_nb = 0
-    path_name = 'results-1d-glv'
+    path_name = 'results-3d-glv'
     while os.path.exists('%s_%s' % (path_name, run_nb)):
         run_nb+=1
     if not os.path.exists('%s_%s' % (path_name, run_nb)):
@@ -467,9 +480,10 @@ def main():
             
 
     mcmc = MCMC(filename, xmlinput, simtime, samples, nCommunities, sedsim, sedlim, flowsim, flowlim, vis,
-        gt_depths, gt_timelay,gt_vec_t, gt_prop_t, min_v, max_v, assemblage, description,v1, v1_title)
+        gt_depths, gt_timelay,gt_vec_t, gt_prop_t, v1_min, v1_max, v2_min, v2_max, assemblage, description,
+        v1, v1_title, v2, v2_title)
 
-    [pos_v1, pos_likl] = mcmc.likelihood_surface()
+    [pos_v1, pos_v2, pos_likl] = mcmc.likelihood_surface()
 
     print 'Successfully sampled'
     

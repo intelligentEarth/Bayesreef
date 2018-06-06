@@ -247,7 +247,7 @@ class modelPlot():
         counter = 0
         max_depth=np.amax(core_depths)
         depth_incrementor = max_depth
-        output_core = np.zeros((communities+1, core_depths.size))
+        output_core = np.zeros((communities+1, core_depths.shape[0]))
         depth_increment = 0.2 
         id_prev = 999
         idx = 0

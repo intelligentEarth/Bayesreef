@@ -18,26 +18,74 @@ import scipy as sp
 from scipy import stats 
 import matplotlib.pyplot as plt
 
-def plotPosCore(pos_samples, core_depths, data_vec, x_tick_labels, x_tick_values, font, width, filename):
+def plotPosCore(filedir, pos_samples_1, pos_samples_2, gt_1, gt_2, y_1, y_2, x_labels, x_values, font):
 
-    fx_mu = pos_samples.mean(axis=0)
-    fx_high = np.percentile(pos_samples, 95, axis=0)
-    fx_low = np.percentile(pos_samples, 5, axis=0)
+    mu_1 = pos_samples_1.mean(axis=0)
+    high_1 = np.percentile(pos_samples_1, 95, axis=0)
+    low_1 = np.percentile(pos_samples_1, 5, axis=0)
+    mu_2 = pos_samples_2.mean(axis=0)
+    high_2 = np.percentile(pos_samples_2, 95, axis=0)
+    low_2 = np.percentile(pos_samples_2, 5, axis=0)
 
-    fig = plt.figure(figsize=(3,6))
-    plt.plot(data_vec, core_depths,label='Synthetic core', color='k')
-    plt.plot(fx_mu,core_depths, label='Pred. (mean)',linewidth=1,linestyle='--')
-    plt.plot(fx_low, core_depths, label='Pred. (5th %ile)',linewidth=1,linestyle='--')
-    plt.plot(fx_high,core_depths, label='Pred. (95th %ile)',linewidth=1,linestyle='--')
-    plt.fill_betweenx(core_depths, fx_low, fx_high, facecolor='mediumaquamarine', alpha=0.4, label=None)
-    plt.title("Core Data vs MCMC Uncertainty", size=font+2)
-    plt.ylim([0.,np.amax(core_depths)])
-    plt.ylim(plt.ylim()[::-1])
-    plt.ylabel('Depth [m]', size=font+1)
-    plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=font+1)
-    plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,0.2))
-    plt.savefig('%s/mcmcres.png' % (filename), bbox_inches='tight', dpi=300,transparent=False)
-    plt.close()
+    fig = plt.figure(figsize=(4,4))
+    suptitle = fig.suptitle('Mean predictions and uncertainty')
+    ax1 = fig.add_subplot(121)
+    ax1.set_facecolor('#f2f2f3')
+    ax1.plot(gt_1, y_1, label='Ground truth', color='k',linewidth=0.7)
+    ax1.plot(mu_1, y_1, label='Pred. (mean)',linestyle='--', linewidth=0.7)
+    ax1.plot(high_1, y_1, label='Pred. (5th %ile)',linestyle='--',linewidth=0.7)
+    ax1.plot(low_1, y_1, label='Pred. (95th %ile)',linestyle='--',linewidth=0.7)
+    ax1.fill_betweenx(y_1, low_1, high_1, facecolor='mediumaquamarine', alpha=0.4)
+    ax1.set_ylabel('Depth [m]')
+    ax1.set_ylim([0,np.amax(y_1)])
+    ax1.set_ylim(ax1.get_ylim()[::-1])
+    ax1.set_xticks(x_values)
+    ax1.set_xticklabels(x_labels, rotation=70)
+    
+    ax2 = fig.add_subplot(122)
+    ax2.set_facecolor('#f2f2f3')
+    ax2.plot(gt_2, y_2, color='k',linewidth=0.7)
+    ax2.plot(mu_2, y_2,linestyle='--',linewidth=0.7)
+    ax2.plot(high_2, y_2,linestyle='--',linewidth=0.7)
+    ax2.plot(low_2, y_2,linestyle='--',linewidth=0.7)
+    ax2.fill_betweenx(y_2, low_2, high_2, facecolor='mediumaquamarine', alpha=0.4)
+    ax2.set_ylabel('Simulation time [yrs]')
+    ax2.set_ylim([0,np.amax(y_2)])
+    ax2.set_ylim(ax2.get_ylim()[::-1])
+    ax2.set_xticks(x_values)
+    ax2.set_xticklabels(x_labels, rotation=70)
+    lgd = fig.legend(frameon=False,bbox_to_anchor = (0.95,0.19), borderpad=2., prop={'size':font-3})
+    plt.tight_layout(pad=2.5)
+    fig.savefig('%s/mcmcres.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
+    plt.close('all')
+
+def plotInitialPrediction(filedir, gt_1, gt_2, init_1, init_2, y_1, y_2,x_labels, x_values):
+    
+    fig = plt.figure(figsize=(4,4))
+    suptitle = fig.suptitle('Initial Prediction')
+    ax1 = fig.add_subplot(121)
+    ax1.set_facecolor('#f2f2f3')
+    ax1.plot(gt_1,y_1, label='Ground truth', color='k',linewidth=0.7)
+    ax1.plot(init_1, y_1, label='Initial prediction',linewidth=0.7)
+    ax1.set_ylabel('Depth [m]')
+    ax1.set_ylim([0,np.amax(y_1)])
+    ax1.set_ylim(ax1.get_ylim()[::-1])
+    ax1.set_xticks(x_values)
+    ax1.set_xticklabels(x_labels, rotation=70)
+    
+    ax2 = fig.add_subplot(122)
+    ax2.set_facecolor('#f2f2f3')
+    ax2.plot(gt_2,y_2, color='k',linewidth=0.7)
+    ax2.plot(init_2, y_2,linewidth=0.7)
+    ax2.set_ylabel('Simulation time [yrs]')
+    ax2.set_ylim([0,np.amax(y_2)])
+    ax2.set_ylim(ax2.get_ylim()[::-1])
+    ax2.set_xticks(x_values)
+    ax2.set_xticklabels(x_labels, rotation=70)
+    lgd = fig.legend(frameon=False,bbox_to_anchor = (0.95,0.093)) #, prop={'size':font+1},bbox_to_anchor = (1.,1.))
+    plt.tight_layout(pad=2.0)
+    fig.savefig('%s/initpred.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
+    plt.close('all')
 
 # def meanConfidenceInterval(data,confidence=95):
 #     a = 1.0*np.array(data)
@@ -220,7 +268,7 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     #   SEDIMENT AND FLOW RESPONSE THRESHOLDS   #
     #############################################
 
-    a_labels = ['Shallow', 'Moderate-deep', 'Deep']#, 'Shallow leeward', 'Moderate-deep leeward', 'Deep leeward']
+    a_labels = ['Shallow', 'Moderate-deep', 'Deep']
     
     sed1_mu, sed1_ub, sed1_lb, sed2_mu, sed2_ub, sed2_lb, sed3_mu, sed3_ub, sed3_lb, sed4_mu, sed4_ub, sed4_lb = (np.zeros(communities) for i in range(12))
     if ((sedsim != False)):
