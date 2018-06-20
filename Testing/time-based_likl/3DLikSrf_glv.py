@@ -362,13 +362,14 @@ class MCMC():
 
                 # USER DEFINED: Substitute generated variables into proposal vector 
                 m = p_v1
-                ax = p_v2
+                ay = p_v2
                 
                 # Proposal to be passed to runModel
                 v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
                 v_proposal = np.append(v_proposal,(ax,ay,m))
                 
                 [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+                # [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t, v_proposal)
                 print 'Likelihood:', likelihood, 'and difference score:', diff
                 
 
@@ -430,20 +431,20 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 25
+    samples= 30
     assemblage= 2
 
     v1 = 'Malthusian parameter'
     v1_title = r'$\varepsilon$'
     v1_min, v1_max = 0., 0.15
     
-    v2 = 'Main diagonal'
-    v2_title = 'a_m' #r'{$\alpha_m$}'
-    v2_min, v2_max = -0.15, 0.
-
-    # v2 = 'Sub-/Super-diagonal'
-    # v2_title = 'a_s' #r'{$\alpha_s$}'
+    # v2 = 'Main diagonal'
+    # v2_title = 'a_m' #r'{$\alpha_m$}'
     # v2_min, v2_max = -0.15, 0.
+
+    v2 = 'Sub-/Super-diagonal'
+    v2_title = 'a_s' #r'{$\alpha_s$}'
+    v2_min, v2_max = -0.15, 0.
 
     description = '3D likelihood surface, %s & %s' % (v1, v2)
     description2 = 'self.likelihoodWithDependence'
@@ -458,7 +459,7 @@ def main():
     gt_timelay = gt_timelay[::-1]
     vis = [False, False]
     sedsim, flowsim = True, True
-    sedlim = [0., 0.005]
+    sedlim = [0., 0.003]
     flowlim = [0.,0.3]
     
     run_nb = 0

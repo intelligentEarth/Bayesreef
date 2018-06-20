@@ -399,16 +399,16 @@ class MCMC():
 
 
                     # Substitute generated variables into proposal vector 
-                    flow2[assemblage-1] = p_v1
-                    flow3[assemblage-1] = p_v2
+                    flow1[assemblage-1] = p_v1
+                    flow2[assemblage-1] = p_v2
                     # print 'sed2', sed2
                     # print 'sed3', sed3
                     
                     # Proposal to be passed to runModel
                     v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
                     v_proposal = np.append(v_proposal,(ax,ay,m))
-
-                    [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+                    [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t, v_proposal)
+                    # [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
                     print 'Likelihood:', likelihood, 'and difference score:', diff
 
                     pos_diff[i] = diff
@@ -430,8 +430,11 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 5
+    samples= 200
+    titles = ['Shallow', 'Mod-deep', 'Deep']
     assemblage= 2
+    sedlim = [0., 0.003]
+    flowlim = [0.,0.3]
 
     sed1=[0.0009, 0.0015, 0.0023]
     sed2=[0.0015, 0.0017, 0.0024]
@@ -442,20 +445,36 @@ def main():
     flow3=[0.259, 0.172, 0.058] 
     flow4=[0.288, 0.185, 0.066] 
 
-    v1 = 'Flow 2'
-    v1_title = '2'
-    v1_min, v1_max = flow1[assemblage-1], flow4[assemblage-1]
+    v1 = 'Flow 1'
+    v1_title = '1'
+    v1_min, v1_max = flowlim[0], flow3[assemblage-1]
+
+    v2 = 'Flow 2'
+    v2_title = '2'
+    v2_min, v2_max = flowlim[0], flow3[assemblage-1]
+
+    # v1 = 'Flow 2'
+    # v1_title = '2'
+    # v1_min, v1_max = flow1[assemblage-1], flow4[assemblage-1]
     
-    v2 = 'Flow 3'
-    v2_title = '3'
-    v2_min, v2_max = flow1[assemblage-1], flow4[assemblage-1]
+    # v2 = 'Flow 3'
+    # v2_title = '3'
+    # v2_min, v2_max = flow1[assemblage-1], flow4[assemblage-1]
+
+    # v1 = 'Flow 3'
+    # v1_title = '3'
+    # v1_min, v1_max = flow2[assemblage-1], flow4[assemblage-1]
+
+    # v2 = 'Flow 4'
+    # v2_title = '4'
+    # v2_min, v2_max = flow3[assemblage-1], flowlim[1]
 
     # v2 = 'Sub-/Super-diagonal'
     # v2_title = 'a_s' #r'{$\alpha_s$}'
     # v2_min, v2_max = -0.15, 0.
 
-    description = '3D likelihood surface, %s & %s' % (v1, v2)
-    description2 = 'self.likelihoodWithDependence'
+    description = '3D likelihood surface, asmb. %s, %s & %s' % (titles[assemblage-1],v1, v2)
+    description2 = 'self.likelihoodWithProps'
     nCommunities = 3
     simtime = 8500
     xmlinput = 'input_synth.xml'
@@ -467,8 +486,6 @@ def main():
     gt_timelay = gt_timelay[::-1]
     vis = [False, False]
     sedsim, flowsim = True, True
-    sedlim = [0., 0.005]
-    flowlim = [0.,0.3]
     
     run_nb = 0
     path_name = 'results-3d-thres'

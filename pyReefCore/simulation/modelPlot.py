@@ -282,7 +282,7 @@ class modelPlot():
         return self.timeCarb, self.pop, self.names
     
     def drawCore(self, depthext = None, thext = None, propext = [0.,1.], lwidth = 3,
-                 colsed=None, coltime=None, size=(8,10), font=8, dpi=80, figname=None,
+                 colsed=None, coltime=None, size=(8,10), font=10, dpi=80, figname=None,
                  filename = None, sep = '\t'):
         """Plot core evolution
 
@@ -325,6 +325,9 @@ class modelPlot():
         variable : sep
             Separator used in the CSV file.
         """
+        label_size = 11
+        matplotlib.rcParams['xtick.labelsize'] = label_size 
+        matplotlib.rcParams['ytick.labelsize'] = label_size 
         p1 = self.sedH[:,:-1] #thicknesses of each coral assemblage
         ids = np.where(self.depth[:-1]>0)[0] #ids are all depth intervals where growth is continuous, before it stops
         p2 = np.zeros((self.sedH.shape)) #proportion of each coral assemblage
@@ -390,7 +393,7 @@ class modelPlot():
         ax4.get_yaxis().set_visible(False)
         ax5.get_xaxis().set_visible(False)
         ax5.get_yaxis().set_visible(False)
-        lgd = ax1.legend(frameon=True, loc='lower left', prop={'size':font+1})
+        lgd = ax1.legend(frameon=True, loc='lower left', prop={'size':font+2})
         ax1.locator_params(axis='x', nbins=5)
         ax2.locator_params(axis='x', nbins=5)
         ax3.locator_params(axis='x', nbins=5)

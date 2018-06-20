@@ -1,8 +1,6 @@
 
 # coding: utf-8
 
-# In[ ]:
-
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,15 +23,11 @@ from PIL import Image
 # 
 # In **ReefCore** the equation is solved using **Runge-Kutta-Fehlberg** method (_RKF45_ or _Fehlberg_ as defined in the odespy library).
 
-# In[ ]:
-
 
 from pyReefCore.model import Model
 
 
 # On the library has been loaded, the model initialisation is done using the following command:
-
-# In[ ]:
 
 
 # Initialise model
@@ -44,22 +38,16 @@ reef = Model()
 # 
 # 
 
-# In[ ]:
-
 
 # reef.enviforcing.buildCurve(timeExt=[0,500],timeStep=10,
 #                             funcExt=[0,20],ampExt=[2,5],
 #                             periodExt=[100,150])
 
 
-# In[ ]:
-
 
 #reef.enviforcing.plotCurves(size=(3,6), lwidth = 3, title='Sea-level curve [m]', 
 #                            color='slateblue', font=8, dpi=80, figName = None)
 
-
-# In[ ]:
 
 
 # reef.enviforcing.exportCurve(nameCSV='data/sealevel.csv')
@@ -73,9 +61,7 @@ reef = Model()
 # - the intrinsic rate of a population species $\epsilon$
 # - the interaction coefficients among the species association $\alpha$
 
-# In[ ]:
-
-filename = 'input_synth_test.xml'
+filename = 'input_synth.xml'
 
 reef.load_xml(filename, False, False)
 
@@ -88,8 +74,6 @@ if not os.path.exists('model-%s' % (run_nb)):
 
 
 # Visualise the initial conditions of your model run can be done using the following command:
-
-# In[ ]:
 
 
 reef.core.initialSetting(size=(8,2.5), size2=(8,4.5), dpi=300, fname='-%s.pdf' % (run_nb))
@@ -109,8 +93,6 @@ reef.core.initialSetting(size=(8,2.5), size2=(8,4.5), dpi=300, fname='-%s.pdf' %
 # 
 # To run the model for a given time period [years], the following function needs to be called:
 
-# In[ ]:
-
 
 reef.run_to_time(8500,showtime=100.)
 
@@ -121,8 +103,6 @@ reef.run_to_time(8500,showtime=100.)
 # 
 # First one can specify a colormap to use for the plot using one of the matplotlib predefined colormap proposed here: 
 # - [colormaps_reference](http://matplotlib.org/examples/color/colormaps_reference.html)
-
-# In[ ]:
 
 
 from matplotlib.cm import terrain, plasma
@@ -140,8 +120,6 @@ colors2 = plasma(np.linspace(0, 1, nbcolors))
 # - with time: `reef.plot.speciesTime`
 # - with depth: `reef.plot.speciesDepth`
 
-# In[ ]:
-
 
 reef.plot.speciesTime(colors=colors, size=(8,4), font=8, dpi=100,fname=('apop_t-%s.pdf' % (run_nb)))
 reef.plot.speciesDepth(colors=colors, size=(8,4), font=8, dpi=100, fname =('apop_d-%s.pdf' % (run_nb)))
@@ -157,14 +135,10 @@ reef.plot.accomodationTime(size=(8,4), font=8, dpi=100, fname =('acc_t-%s.pdf' %
 # - the figure using the `figname` parameter (`figname` could either have a _.png_ or _.pdf_ extension)
 # - the model output as a _CSV_ file using the `filename` parameter. This will dump all output dataset for further analysis if required.
 
-# In[ ]:
-
 
 reef.plot.drawCore(lwidth = 3, colsed=colors, coltime = colors2, size=(9,8), font=8, dpi=380, 
                    figname=('core-%s.pdf' % (run_nb)), filename=('core-%s.csv' % (run_nb)), sep='\t')
 
-
-# In[ ]:
 
 
 def gen_find(filepat,top):
@@ -182,47 +156,18 @@ for name in filesToMove:
     shutil.move(name, dst)
 
 
-# In[ ]:
-
-
-np.set_printoptions(threshold='nan')
-communities = 3
-p2, output_core, core_depths = reef.plot.write_core(communities)
-print output_core
-synth_core = reef.convert_core(communities,output_core, core_depths)
-print 'synth core', synth_core
-src = 'data/synthetic_core'
-with file(('%s/synth_core_%s_prop.txt' % (src, run_nb)), 'w') as outfile:
-    for h in range(core_depths.size):
-        rev = -1-h
-        depth_str = str(core_depths[h])
-        outfile.write('{0}\t'.format(depth_str))
-        for c in range(communities+1):
-            oc_string = str(output_core[c,h])
-            outfile.write('{0}\t'.format(oc_string))
-        outfile.write("\n")
-
-
-# with file(('%s/synth_core_%s.txt' % (src, run_nb)), 'w') as outfile:
-#     for h in range(core_depths.size):
+# np.set_printoptions(threshold='nan')
+# communities = 3
+# # synth_core = reef.convert_core(communities,output_core, core_depths)
+# synth_core, timelay = reef.plot.convertTimeStructure()
+# print 'synth core', synth_core
+# src = 'data/synthetic_core'
+# with file(('%s/rawsynth-%s.txt' % (src, run_nb)), 'w') as outfile:
+#     for h in range(timelay.size):
 #         rev = -1-h
-#         depth_str = str(core_depths[rev]) 
-#         core_str = str(output_core[:,h])
-#         with file(('%s/synth_core_%s.txt' % (src,run_nb)), 'a') as outfile:
-#                     outfile.write('{0}\t{1}\n'.format(depth_str, core_str))
-
-
-# In[ ]:
-
-
-
-
-# # In[ ]:
-
-
-# datafile = 'data/synthetic_core/synth_core_0.txt'
-# core_depths, core_data = np.genfromtxt(datafile, usecols=(0,1), unpack = True)
-
-
-
-
+#         depth_str = str(timelay[h])
+#         outfile.write('{0}\t'.format(depth_str))
+#         for c in range(communities+1):
+#             oc_string = str(synth_core[h,c])
+#             outfile.write('{0}\t'.format(oc_string))
+#         outfile.write("\n")

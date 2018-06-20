@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 
 def plotPosCore(filedir, pos_samples_1, pos_samples_2, gt_1, gt_2, y_1, y_2, x_labels, x_values, font):
 
+    # gt_2 = gt_2[::-1]
+    # y_2 = y_2[::-1]
     mu_1 = pos_samples_1.mean(axis=0)
     high_1 = np.percentile(pos_samples_1, 95, axis=0)
     low_1 = np.percentile(pos_samples_1, 5, axis=0)
@@ -51,7 +53,7 @@ def plotPosCore(filedir, pos_samples_1, pos_samples_2, gt_1, gt_2, y_1, y_2, x_l
     ax2.fill_betweenx(y_2, low_2, high_2, facecolor='mediumaquamarine', alpha=0.4)
     ax2.set_ylabel('Simulation time [yrs]')
     ax2.set_ylim([0,np.amax(y_2)])
-    ax2.set_ylim(ax2.get_ylim()[::-1])
+    ax2.set_ylim(ax2.get_ylim())#[::-1])
     ax2.set_xticks(x_values)
     ax2.set_xticklabels(x_labels, rotation=70)
     lgd = fig.legend(frameon=False,bbox_to_anchor = (0.95,0.19), borderpad=2., prop={'size':font-3})
@@ -60,7 +62,9 @@ def plotPosCore(filedir, pos_samples_1, pos_samples_2, gt_1, gt_2, y_1, y_2, x_l
     plt.close('all')
 
 def plotInitialPrediction(filedir, gt_1, gt_2, init_1, init_2, y_1, y_2,x_labels, x_values):
-    
+    # init_2 = init_2[::-1]
+    # gt_2 = gt_2[::-1]
+    # y_2 = y_2[::-1]
     fig = plt.figure(figsize=(4,4))
     suptitle = fig.suptitle('Initial Prediction')
     ax1 = fig.add_subplot(121)
@@ -79,7 +83,7 @@ def plotInitialPrediction(filedir, gt_1, gt_2, init_1, init_2, y_1, y_2,x_labels
     ax2.plot(init_2, y_2,linewidth=0.7)
     ax2.set_ylabel('Simulation time [yrs]')
     ax2.set_ylim([0,np.amax(y_2)])
-    ax2.set_ylim(ax2.get_ylim()[::-1])
+    ax2.set_ylim(ax2.get_ylim())#[::-1])
     ax2.set_xticks(x_values)
     ax2.set_xticklabels(x_labels, rotation=70)
     lgd = fig.legend(frameon=False,bbox_to_anchor = (0.95,0.093)) #, prop={'size':font+1},bbox_to_anchor = (1.,1.))
@@ -96,23 +100,23 @@ def plotInitialPrediction(filedir, gt_1, gt_2, init_1, init_2, y_1, y_2,x_labels
 #     return m, m-h, m+h
 
 def plotLiklAndDiff(pos_likl,pos_diff, s_range, font, filename):
-    fig = plt.figure(figsize=(6,4))
+    fig = plt.figure(figsize=(6,3))
     ax= fig.add_subplot(111)
     ax.set_facecolor('#f2f2f3')
     plt.plot(s_range,pos_diff,'-')
-    plt.title("Difference score evolution", size=font+2)
+    plt.title("Difference score evolution", size=font+1)
     plt.ylabel("Difference", size=font+1)
     plt.xlabel("Number of samples", size=font+1)
     plt.xlim(np.amin(s_range),np.amax(s_range))
     plt.savefig('%s/evol_diff.png' % (filename), bbox_inches='tight',dpi=300,transparent=False)
     plt.close()
 
-    fig = plt.figure(figsize=(6,4))
+    fig = plt.figure(figsize=(6,3))
     ax= fig.add_subplot(111)
     ax.set_facecolor('#f2f2f3')
     plt.plot(s_range,pos_likl,'-')
-    plt.title("Likelihood evolution", size=font+2)
-    plt.ylabel("Log likelihood", size=font+1)
+    plt.title("Likelihood evolution", size=font+1)
+    plt.ylabel("Likelihood", size=font+1)
     plt.xlabel("Number of samples", size=font+1)
     # plt.xlim(0,len(pos_likl)-1)
     plt.xlim(np.amin(s_range),np.amax(s_range))
@@ -122,11 +126,9 @@ def plotLiklAndDiff(pos_likl,pos_diff, s_range, font, filename):
 def plotParameters(fname, s_range, sedsim, flowsim,communities, 
     pos_m, pos_ax, pos_ay, true_m, true_ax, true_ay,
     pos_sed1, pos_sed2, pos_sed3, pos_sed4, true_sed,
-    pos_flow1, pos_flow2, pos_flow3, pos_flow4,true_flow):
+    pos_flow1, pos_flow2, pos_flow3, pos_flow4,true_flow,font,width):
     nb_bins=30
     # s_range = np.arange(0,pos_m.shape[0],1)
-    font = 10
-    width = 1
 
     #########################
     #   MALTHUS PARAMETER   #
@@ -139,14 +141,14 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     mmedian=np.median(pos_m)
     mmode,count=stats.mode(pos_m)
 
-    fig = plt.figure(figsize=(6,8))
+    fig = plt.figure(figsize=(5,6))
     ax = fig.add_subplot(111)
     ax.spines['top'].set_color('none')
     ax.spines['bottom'].set_color('none')
     ax.spines['left'].set_color('none')
     ax.spines['right'].set_color('none')
     ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-    ax.set_title(' Malthusian Parameter', fontsize= font+2)#, y=1.02)
+    ax.set_title(r'Density histogram of $\varepsilon$', fontsize= font+1)#, y=1.02)
     
     ax1 = fig.add_subplot(211)
     ax1.set_facecolor('#f2f2f3')
@@ -159,7 +161,7 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     ax2 = fig.add_subplot(212)
     ax2.set_facecolor('#f2f2f3')
     ax2.plot(s_range,pos_m,linestyle='-', linewidth=width, color='k', label=None)
-    ax2.set_title(r'Trace of $\varepsilon$',size=font+2)
+    ax2.set_title(r'Trace of $\varepsilon$',size=font+1)
     ax2.set_xlabel('Samples',size=font+1)
     ax2.set_ylabel(r'$\varepsilon$', size=font+1)
     ax2.set_xlim([np.amin(s_range),np.amax(s_range)])
@@ -193,28 +195,28 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     ###################
     #   MAIN DIAGONAL #
     ###################
-    fig = plt.figure(figsize=(6,8))
+    fig = plt.figure(figsize=(5,6))
     ax = fig.add_subplot(111)
     ax.spines['top'].set_color('none')
     ax.spines['bottom'].set_color('none')
     ax.spines['left'].set_color('none')
     ax.spines['right'].set_color('none')
     ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-    ax.set_title('Community Interaction Matrix Parameters', fontsize= font+2, y=1.03)
+    # ax.set_title('Community Interaction Matrix Parameters', fontsize= font+1, y=1.03)
     ax1 = fig.add_subplot(211)
     ax1.set_facecolor('#f2f2f3')
     ax1.hist(pos_ax, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
     ax1.axvline(true_ax, linestyle='-', color='black', linewidth=1,label='True value')
     ax1.grid(True)
     ax1.set_ylabel('Frequency',size=font+1)
-    ax1.set_title(r'Main diagonal value ($\alpha_{m}$)',size=font+2)
+    ax1.set_title(r'Main diagonal ($\alpha_{m}$)',size=font+1)
     ax1.set_xlabel(r'$\alpha_{m}$', size=font+1)
     ax2 = fig.add_subplot(212)
     ax2.set_facecolor('#f2f2f3')
     ax2.plot(s_range,pos_ax,linestyle='-', linewidth=width, color='k', label=None)
     ax2.set_xlabel('Samples',size=font+1)
     ax2.set_ylabel(r'$\alpha_{m}$', size=font+1)
-    ax2.set_title(r'Trace of $\alpha_{m}$',size=font+2)
+    ax2.set_title(r'Trace of $\alpha_{m}$',size=font+1)
     ax2.set_xlim([np.amin(s_range),np.amax(s_range)])
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
@@ -224,26 +226,26 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     #############################
     #   SUPER-/SUB-DIAGONALS    #
     ############################# 
-    fig = plt.figure(figsize=(6,8))
+    fig = plt.figure(figsize=(5,6))
     ax = fig.add_subplot(111)
     ax.spines['top'].set_color('none')
     ax.spines['bottom'].set_color('none')
     ax.spines['left'].set_color('none')
     ax.spines['right'].set_color('none')
     ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-    ax.set_title('Community Interaction Matrix Parameters', fontsize= font+2, y=1.03)
+    # ax.set_title('Community Interaction Matrix Parameters', fontsize= font+1, y=1.03)
     ax1 = fig.add_subplot(211)
     ax1.set_facecolor('#f2f2f3')
     ax1.hist(pos_ay, bins=25, alpha=0.5, facecolor='mediumaquamarine', normed=True)
     ax1.axvline(true_ay, linestyle='-', color='black', linewidth=1,label='True value')
     ax1.grid(True)
-    ax1.set_title(r'Super- and sub-diagonal values ($\alpha_{s}$)',size=font+2)
+    ax1.set_title(r'Super- and sub-diagonal values ($\alpha_{s}$)',size=font+1)
     ax1.set_xlabel(r'$\alpha_{s}$', size=font+1)
     ax1.set_ylabel('Frequency',size=font+1)
     ax2 = fig.add_subplot(212)
     ax2.set_facecolor('#f2f2f3')
     ax2.plot(s_range,pos_ay,linestyle='-', linewidth=width, color='k', label=None)
-    ax2.set_title(r'Trace of $\alpha_{s}$',size=font+2)
+    ax2.set_title(r'Trace of $\alpha_{s}$',size=font+1)
     ax2.set_xlabel('Samples',size=font+1)
     ax2.set_ylabel(r'$\alpha_{s}$', size=font+1)
     ax2.set_xlim([np.amin(s_range),np.amax(s_range)])
@@ -322,33 +324,41 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
             c_lb = [sed1_mu[a]-sed1_lb[a], sed2_mu[a]-sed2_lb[a], sed3_mu[a]-sed3_lb[a], sed4_mu[a]-sed4_lb[a]]
             c_ub = [sed1_ub[a]-sed1_mu[a], sed2_ub[a]-sed2_mu[a], sed3_ub[a]-sed3_mu[a], sed4_ub[a]-sed4_mu[a]]
             
-            fig = plt.figure(figsize=(6,4))
+            fig = plt.figure(figsize=(6,3))
             ax = fig.add_subplot(111)
             ax.set_facecolor('#f2f2f3')
             ax.plot(true_sed[a,:], cy, linestyle='--', linewidth=width, marker='.',color='k', label='Synthetic data')
             ax.plot(cmu, cy, linestyle='-', linewidth=width,marker='.', color='sandybrown', label='Mean')
             ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1, color='darksalmon',mfc='darksalmon',fmt='.',label=None)
             ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1, color='sienna',mfc='sienna',fmt='.',label=None)
-            plt.title('Sediment exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=font+2, y=1.06)
             plt.ylabel('Proportion of maximum growth rate [%]',size=font+1)
             plt.xlabel('Sediment input [m/year]',size=font+1)
             plt.ylim(-2.,110)
-            lgd = plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,0.2))
-            plt.savefig('%s/sediment_response_%s.png' % (fname, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=False)
+            if a+1 == 1:
+                plt.title('Sediment exposure threshold function\n%s assemblage' % (a_labels[a]), size=font+1, y=1.06)
+            else:
+                plt.title('%s assemblage' % (a_labels[a]), size=font+1, y=1.06)
+
+            if a+1 == 3:
+                lgd = plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,-0.2))
+                plt.savefig('%s/sediment_response_%s.png' % (fname, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=False)
+            else: 
+                plt.savefig('%s/sediment_response_%s.png' % (fname, a+1),bbox_inches='tight',dpi=300,transparent=False)
+
             plt.close()
 
             ####################################################
             #   TRACE PLOTS OF SEDIMENT EXPOSURE THRESHOLDS    #
             ####################################################
 
-            fig = plt.figure(figsize=(12,8))
+            fig = plt.figure(figsize=(9,6))
             ax = fig.add_subplot(111)
             ax.spines['top'].set_color('none')
             ax.spines['bottom'].set_color('none')
             ax.spines['left'].set_color('none')
             ax.spines['right'].set_color('none')
             ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-            ax.set_title('Trace plots of sediment input thresholds: %s ' % a_labels[a], fontsize= font+2, y=1.03)
+            ax.set_title('Traces of sediment input thresholds: %s ' % a_labels[a], fontsize= font+1, y=1.03)
 
             ax1 = fig.add_subplot(221)
             ax1.set_facecolor('#f2f2f3')
@@ -437,32 +447,39 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
             c_ub = [flow1_ub[a]-flow1_mu[a], flow2_ub[a]-flow2_mu[a], flow3_ub[a]-flow3_mu[a], flow4_ub[a]-flow4_mu[a]]
 
             
-            fig = plt.figure(figsize=(6,4))
+            fig = plt.figure(figsize=(6,3))
             ax = fig.add_subplot(111)
             ax.set_facecolor('#f2f2f3')
             ax.plot(true_flow[a,:], cy, linestyle='--', linewidth=width, marker='.', color='k',label='Synthetic data')
             ax.plot(cmu, cy, linestyle='-', linewidth=width, marker='.', color='steelblue', label='Mean')
             ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1,color='lightsteelblue',mfc='lightsteelblue',fmt='.',label=None)
             ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1,color='lightslategrey',mfc='lightslategrey',fmt='.',label=None)
-            plt.title('Hydrodynamic energy exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=font+2, y=1.06)
             plt.ylabel('Proportion of maximum growth rate [%]', size=font+1)
             plt.xlabel('Fluid flow [m/sec]', size=font+1)
             plt.ylim(-2.,110.)
-            lgd = plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,0.2))
-            plt.savefig('%s/flow_response_%s.png' % (fname, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
+            if a+1 == 1:
+                plt.title('Hydrodynamic energy exposure threshold function\n%s assemblage' % (a_labels[a]), size=font+1, y=1.06)
+            else:
+                plt.title('%s assemblage' % (a_labels[a]), size=font+1, y=1.06)
+            if a+1 == 3:
+                lgd = plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,-0.2))
+                plt.savefig('%s/flow_response_%s.png' % (fname, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
+            else: 
+                plt.savefig('%s/flow_response_%s.png' % (fname, a+1), bbox_inches='tight',dpi=300,transparent=False)
+
             plt.close()
 
             #########################################################
             #   TRACE PLOTS OF FLOW VELOCITY EXPOSURE THRESHOLDS    #
             #########################################################
-            fig = plt.figure(figsize=(12,8))
+            fig = plt.figure(figsize=(9,6))
             ax = fig.add_subplot(111)
             ax.spines['top'].set_color('none')
             ax.spines['bottom'].set_color('none')
             ax.spines['left'].set_color('none')
             ax.spines['right'].set_color('none')
             ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-            ax.set_title('Trace plots of flow velocity Thresholds: %s ' % a_labels[a], fontsize= font+2, y=1.03)
+            ax.set_title('Traces of flow velocity thresholds: %s ' % a_labels[a], fontsize= font+1, y=1.03)
 
             ax1 = fig.add_subplot(221)
             ax1.set_facecolor('#f2f2f3')
@@ -523,13 +540,13 @@ def boxPlots(communities, pos_v, sedsim, flowsim, font, width, filename):
             ax.spines['left'].set_color('none')
             ax.spines['right'].set_color('none')
             ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-            ax.set_title('Posterior values', fontsize= font+2, y=1.02)
+            ax.set_title('Posterior values', fontsize= font+1, y=1.02)
             ax1 = mpl_fig.add_subplot(121)
             ax1.boxplot(v_glve)
-            ax1.set_xlabel('GLVE parameters', size=font+2)
+            ax1.set_xlabel('GLVE parameters', size=font+1)
             ax2 = mpl_fig.add_subplot(122)
             ax2.boxplot(new_v)
-            ax2.set_xlabel('Assemblage exposure thresholds', size=font+2)
+            ax2.set_xlabel('Assemblage exposure thresholds', size=font+1)
             plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             plt.close()
         elif ((sedsim == True) and (flowsim == True)):
@@ -563,23 +580,23 @@ def boxPlots(communities, pos_v, sedsim, flowsim, font, width, filename):
             ax.spines['left'].set_color('none')
             ax.spines['right'].set_color('none')
             ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-            ax.set_title('Posterior values', fontsize= font+2, y=1.02)
+            ax.set_title('Posterior values', fontsize= font+1, y=1.02)
             ax1 = mpl_fig.add_subplot(131)
             ax1.boxplot(v_glve)
-            ax1.set_xlabel('GLVE parameters', size=font+2)
+            ax1.set_xlabel('GLVE parameters', size=font+1)
             ax2 = mpl_fig.add_subplot(132)
             ax2.boxplot(v_sed)
-            ax2.set_xlabel('Assemblage sediment exposure thresholds', size=font+2)
+            ax2.set_xlabel('Assemblage sediment exposure thresholds', size=font+1)
             ax3 = mpl_fig.add_subplot(133)
             ax3.boxplot(v_flow)
-            ax3.set_xlabel('Assemblage flow exposure thresholds', size=font+2)
+            ax3.set_xlabel('Assemblage flow exposure thresholds', size=font+1)
             plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             # mpl_fig = plt.figure(figsize=(10,4))
             # ax = mpl_fig.add_subplot(111)
             # ax.boxplot(new_v)
             # ax.set_ylabel('Posterior values')
             # ax.set_xlabel('Input vector')
-            # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=font+2)
+            # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=font+1)
             # plt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
             # # plt.savefig('%s/v_pos_boxplot.svg'% (filename), format='svg', dpi=300)
             plt.close()
@@ -615,13 +632,13 @@ def boxPlots(communities, pos_v, sedsim, flowsim, font, width, filename):
             ax.spines['left'].set_color('none')
             ax.spines['right'].set_color('none')
             ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-            ax.set_title('Posterior values', fontsize= font+2, y=1.02)
+            ax.set_title('Posterior values', fontsize= font+1, y=1.02)
             ax1 = mpl_fig.add_subplot(121)
             ax1.boxplot(v_glve)
-            ax1.set_xlabel('GLVE parameters', size=font+2)
+            ax1.set_xlabel('GLVE parameters', size=font+1)
             ax2 = mpl_fig.add_subplot(122)
             ax2.boxplot(new_v)
-            ax2.set_xlabel('Assemblage exposure thresholds', size=font+2)
+            ax2.set_xlabel('Assemblage exposure thresholds', size=font+1)
             plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             # for i in range(3,7):
             #     new_v[:,i] = pos_v[:,com_1[i-3]]
@@ -636,7 +653,7 @@ def boxPlots(communities, pos_v, sedsim, flowsim, font, width, filename):
             # ax.boxplot(new_v)
             # ax.set_ylabel('Posterior values')
             # ax.set_xlabel('Input vector')
-            # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=font+2)
+            # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=font+1)
             # plt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
             # plt.savefig('%s/v_pos_boxplot.svg'% (filename), format='svg', dpi=300)
             plt.close()
@@ -687,23 +704,23 @@ def boxPlots(communities, pos_v, sedsim, flowsim, font, width, filename):
             ax.spines['left'].set_color('none')
             ax.spines['right'].set_color('none')
             ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-            ax.set_title('Posterior values', fontsize= font+2, y=1.02)
+            ax.set_title('Posterior values', fontsize= font+1, y=1.02)
             ax1 = mpl_fig.add_subplot(131)
             ax1.boxplot(v_glve)
-            ax1.set_xlabel('GLVE parameters', size=font+2)
+            ax1.set_xlabel('GLVE parameters', size=font+1)
             ax2 = mpl_fig.add_subplot(132)
             ax2.boxplot(v_sed)
-            ax2.set_xlabel('Assemblage sediment exposure thresholds', size=font+2)
+            ax2.set_xlabel('Assemblage sediment exposure thresholds', size=font+1)
             ax3 = mpl_fig.add_subplot(133)
             ax3.boxplot(v_flow)
-            ax3.set_xlabel('Assemblage flow exposure thresholds', size=font+2)
+            ax3.set_xlabel('Assemblage flow exposure thresholds', size=font+1)
             plt.savefig('%s/v_pos_boxplot.png'% (filename), dpi=300,transparent=False)
             # mpl_fig = plt.figure(figsize=(10,4))
             # ax = mpl_fig.add_subplot(111)
             # ax.boxplot(new_v)
             # ax.set_ylabel('Posterior values')
             # ax.set_xlabel('Input vector')
-            # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=font+2)
+            # plt.title("Boxplot of posterior distribution \nfor GLVE and threshold parameters", size=font+1)
             # plt.savefig('%s/v_pos_boxplot.pdf'% (filename), dpi=300)
             # # plt.savefig('%s/v_pos_boxplot.svg'% (filename), format='svg', dpi=300)
             plt.close()

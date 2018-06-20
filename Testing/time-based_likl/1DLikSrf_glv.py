@@ -237,9 +237,9 @@ class MCMC():
         X = v1
         Y = likelihood
         print 'X shape: ', X.shape, 'Y shape: ', Y.shape
-        fig = plt.figure(figsize=(6,4))
+        fig = plt.figure(figsize=(6,3))
         ax1 = fig.add_subplot(111)
-        ax1.set_title('%s' % self.description, fontsize= font+2)#, y=1.02)
+        ax1.set_title('%s' % self.description, fontsize= font+1)#, y=1.02)
         ax1.set_facecolor('#f2f2f3')
         ax1.set_xlabel('%s' % self.var1_title)
         ax1.set_ylabel('Likelihood')
@@ -249,11 +249,11 @@ class MCMC():
         plt.savefig('%s/1dsurf.png'% (fname), bbox_inches='tight', dpi=300, transparent=False)
         plt.clf()
 
-        fig = plt.figure(figsize=(6,4))
+        fig = plt.figure(figsize=(6,3))
         ax= fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
         plt.plot(v1,diff)
-        plt.title("Difference score evolution", size=self.font+2)
+        plt.title("Difference score evolution", size=self.font+1)
         plt.ylabel("Difference", size=self.font+1)
         plt.xlabel('%s' % self.var1_title)
         plt.xlim(X.min(), X.max())
@@ -261,11 +261,11 @@ class MCMC():
         fig.tight_layout()
         plt.clf()
 
-        fig = plt.figure(figsize=(6,4))
+        fig = plt.figure(figsize=(6,3))
         ax= fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
         plt.plot(v1,rmse)
-        plt.title("RMSE evolution", size=self.font+2)
+        plt.title("RMSE evolution", size=self.font+1)
         plt.ylabel("RMSE", size=self.font+1)
         plt.xlabel('%s' % self.var1_title)
         plt.xlim(X.min(), X.max())
@@ -393,6 +393,7 @@ class MCMC():
             v_proposal = np.append(v_proposal,(ax,ay,m))
             S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
             [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+            # [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t,v_proposal)
             print 'Likelihood:', likelihood, 'and difference score:', diff
             pos_v1[i] = p_v1
             pos_likl[i] = likelihood
@@ -414,12 +415,12 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 300
+    samples= 200
     assemblage= 2
 
     # v1 = 'Malthusian Parameter'
     # v1_title = r'$\varepsilon$'
-    # min_v =0.01
+    # min_v =0.
     # max_v = 0.15
     
     # v1 = 'Main diagonal'
@@ -432,7 +433,7 @@ def main():
     min_v =-0.15
     max_v = 0
 
-    description = '1D likelihood surface, %s' % v1
+    description = 'Marginal likelihood: %s' % v1
     description2 = 'self.likelihoodWithDependence'
     nCommunities = 3
     simtime = 8500
@@ -445,7 +446,7 @@ def main():
     gt_timelay = gt_timelay[::-1]
     vis = [False, False]
     sedsim, flowsim = True, True
-    sedlim = [0., 0.005]
+    sedlim = [0., 0.003]
     flowlim = [0.,0.3]
     
     run_nb = 0

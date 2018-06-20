@@ -335,6 +335,8 @@ class MCMC():
         reef = Model()
         S_star, cps_star, ca_props_star = self.modelOutputParameters(gt_prop_t,gt_vec_t,gt_timelay)
         [likelihood, diff, sim_pred_t, sim_pred_d, sim_vec_t, sim_vec_d] = self.likelihoodWithDependence(reef, v_proposal, S_star, cps_star, ca_props_star)
+        # [likelihood, diff, sim_pred_t, sim_pred_d, sim_vec_t, sim_vec_d] = self.likelihoodWithProps(reef, self.gt_prop_t, v_proposal)
+
         print '\tInitial likelihood:', likelihood
         pos_diff = np.full(samples,diff)
         pos_likl = np.full(samples, likelihood)
@@ -383,7 +385,7 @@ class MCMC():
         plt.xticks(x_tick_values, x_tick_labels,rotation=70)
         axprop_t.set_ylabel('Simulation time [yrs]')
         axprop_t.set_ylim([0,np.amax(gt_timelay)])
-        axprop_t.set_ylim(axprop_t.get_ylim()[::-1])
+        axprop_t.set_ylim(axprop_t.get_ylim())#[::-1])
 
         for i in range(samples - 1):
             print '\nSample: ', i
@@ -495,6 +497,8 @@ class MCMC():
                 v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
             v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
             [likelihood_proposal, diff, sim_pred_t, sim_pred_d, sim_vec_t, sim_vec_d] = self.likelihoodWithDependence(reef, v_proposal, S_star, cps_star, ca_props_star)
+            # [likelihood_proposal, diff, sim_pred_t, sim_pred_d, sim_vec_t, sim_vec_d] = self.likelihoodWithProps(reef, self.gt_prop_t, v_proposal)
+
             diff_likelihood = likelihood_proposal - likelihood # to divide probability, must subtract
             print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood
             mh_prob = min(1, math.exp(diff_likelihood))
@@ -611,7 +615,7 @@ class MCMC():
 def main():
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 20000 #input('Enter number of samples: ')
+    samples= 100000 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
     description = 'Time-based likelihood. self.likelihoodWithDependence'
     assemblage = 2
@@ -629,22 +633,23 @@ def main():
     Mainly useful for runModel.py and slows down simulation in MCMC sampler. """
     vis = [False, False]
     sedsim, flowsim = True, True
-    sedlim = [0., 0.005]
+    sedlim = [0., 0.003]
     flowlim = [0.,0.3]
     run_nb = 0
 
-    min_a = 0
-    max_a = -0.15
-    min_m = 0
+    min_a = -0.15
+    max_a = 0.
+    min_m = 0.
     max_m = 0.15
     true_m = 0.08
     true_ax = -0.01
     true_ay = -0.03
 
-    step_sed = 0.01 * abs(sedlim[0]-sedlim[1])
-    step_flow = 0.01 * abs(flowlim[0]-flowlim[1])
-    step_m = 0.01 * abs(min_m-max_m)
-    step_a = 0.01 * abs(min_a-max_a)
+    step_pcent = 0.01
+    step_sed = step_pcent * abs(sedlim[0]-sedlim[1])
+    step_flow = step_pcent * abs(flowlim[0]-flowlim[1])
+    step_m = step_pcent * abs(min_m-max_m)
+    step_a = step_pcent * abs(min_a-max_a)
 
     path_name = 'results-multinomial-t'
     while os.path.exists('%s_%s' % (path_name, run_nb)):
@@ -661,7 +666,9 @@ def main():
             outfile.write('\nSimulation time: {0} yrs'.format(simtime))
             outfile.write('\nNo. samples: {0}'.format(samples))
             outfile.write('\nXML input: {0}'.format(xmlinput))
-            outfile.write('\nData file: {0}'.format(synth_vec))
+            outfile.write('\nData files: {0}, {1}'.format(synth_vec, synth_data))
+            outfile.write('\nStepsize as percent of prior range: {0} %'.format(step_pcent*100))
+
 
     mcmc = MCMC(filename, xmlinput, simtime, samples, nCommunities, sedsim, sedlim, flowsim, flowlim, vis,
         gt_depths, gt_vec_d, gt_timelay, gt_vec_t, gt_prop_t,
@@ -724,7 +731,7 @@ def main():
     plotResults.plotParameters(mcmc.filename, sample_range, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
         pos_m, pos_ax, pos_ay, mcmc.true_m, mcmc.true_ax, mcmc.true_ay, 
         pos_sed1, pos_sed2, pos_sed3, pos_sed4, mcmc.true_sed,
-        pos_flow1, pos_flow2, pos_flow3, pos_flow4, mcmc.true_flow)
+        pos_flow1, pos_flow2, pos_flow3, pos_flow4, mcmc.true_flow, mcmc.font, mcmc.width)
     print 'Finished simulations'
 
 if __name__ == "__main__": main()

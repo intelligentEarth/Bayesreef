@@ -42,7 +42,7 @@ class MCMC():
     def __init__(self, filename, xmlinput, simtime, samples, communities, sedsim, sedlim, flowsim, flowlim, vis,
         gt_depths, gt_timelay, gt_vec_t, gt_prop_t, min_v, max_v, assemblage, description,v1, v1_title):
         
-        self.font = 10
+        self.font = 12
         self.width = 1
         self.colors = terrain(np.linspace(0, 1.8, 14)) #len(reef.core.coralH)+10))
         self.colors2 = plasma(np.linspace(0, 1, 174)) #len(reef.core.layTime)+3))
@@ -237,38 +237,41 @@ class MCMC():
         X = v1
         Y = likelihood
         print 'X shape: ', X.shape, 'Y shape: ', Y.shape
-        fig = plt.figure(figsize=(6,4))
+        fig = plt.figure(figsize=(6,3))
         ax1 = fig.add_subplot(111)
-        ax1.set_title('%s' % self.description, fontsize= font+2)#, y=1.02)
+        ax1.set_title('%s' % self.description, fontsize= font+1)#, y=1.02)
         ax1.set_facecolor('#f2f2f3')
         ax1.set_xlabel('%s' % self.var1_title)
         ax1.set_ylabel('Likelihood')
         ax1.plot(X,Y)
         ax1.set_xlim(X.min(), X.max())
+        ax1.set_ylim(Y.max()-10,0)
         fig.tight_layout()
         plt.savefig('%s/1dsurf.png'% (fname), bbox_inches='tight', dpi=300, transparent=False)
         plt.clf()
 
-        fig = plt.figure(figsize=(6,4))
+        fig = plt.figure(figsize=(6,3))
         ax= fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
         plt.plot(v1,diff)
-        plt.title("Difference score evolution", size=self.font+2)
+        plt.title("Difference score evolution", size=self.font+1)
         plt.ylabel("Difference", size=self.font+1)
         plt.xlabel('%s' % self.var1_title)
         plt.xlim(X.min(), X.max())
+        plt.ylim(Y.max()-10,0)
         plt.savefig('%s/diff_evol.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
         fig.tight_layout()
         plt.clf()
 
-        fig = plt.figure(figsize=(6,4))
+        fig = plt.figure(figsize=(6,3))
         ax= fig.add_subplot(111)
         ax.set_facecolor('#f2f2f3')
         plt.plot(v1,rmse)
-        plt.title("RMSE evolution", size=self.font+2)
+        plt.title("RMSE evolution", size=self.font+1)
         plt.ylabel("RMSE", size=self.font+1)
         plt.xlabel('%s' % self.var1_title)
         plt.xlim(X.min(), X.max())
+        plt.ylim(Y.max()-10,0)
         plt.savefig('%s/rmse_evol.png' % (self.filename), bbox_inches='tight',dpi=300,transparent=False)
         fig.tight_layout()
         plt.clf()
@@ -386,13 +389,14 @@ class MCMC():
 
 
             # USER DEFINED: Substitute generated variables into proposal vector 
-            flow1[assemblage-1] = p_v1
+            flow4[assemblage-1] = p_v1
             
             # Proposal to be passed to runModel
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
             v_proposal = np.append(v_proposal,(ax,ay,m))
-            S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
-            [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+            # S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
+            # [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+            [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t, v_proposal)
             print 'Likelihood:', likelihood, 'and difference score:', diff
             pos_v1[i] = p_v1
             pos_likl[i] = likelihood
@@ -414,8 +418,8 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 10
-    assemblage= 3
+    samples= 200
+    assemblage= 1
 
     title = ['Shallow', 'Mod-deep', 'Deep'] 
     sed1=[0.0009, 0.0015, 0.0023]
@@ -426,14 +430,14 @@ def main():
     flow2=[0.082, 0.051, 0.]
     flow3=[0.259, 0.172, 0.058] 
     flow4=[0.288, 0.185, 0.066]
-    sedlim = [0., 0.005]
+    sedlim = [0., 0.003]
     flowlim = [0.,0.3]
 
-    v1_title = r'$f_{flow}^1$'
-    v1 = 'Hydrodynamic energy threshold, %s assemblage (%s)' % (title[assemblage-1],v1_title)
+    v1_title = r'$f_{flow}^4$'
+    v1 = 'Hydrodynamic energy threshold:\n %s assemblage (%s)' % (title[assemblage-1],v1_title)
     
-    min_v = flowlim[0]
-    max_v = flow2[assemblage-1]
+    # min_v = flowlim[0]
+    # max_v = flow2[assemblage-1]
 
     # min_v = flow1[assemblage-1]
     # max_v = flow3[assemblage-1]
@@ -441,11 +445,11 @@ def main():
     # min_v = flow2[assemblage-1]
     # max_v = flow4[assemblage-1]
 
-    # min_v = flow3[assemblage-1]
-    # max_v = flowlim[1]
+    min_v = flow3[assemblage-1]
+    max_v = flowlim[1]
 
-    # v1_title = r'$f_{sed}^3$'
-    # v1 = 'Sediment exposure threshold: %s assemblage (%s)' % (title[assemblage-1], v1_title)
+    # v1_title = r'$f_{sed}^4$'
+    # v1 = 'Sediment exposure threshold:\n %s assemblage (%s)' % (title[assemblage-1], v1_title)
     
     # min_v = sedlim[0]
     # max_v = sed2[assemblage-1]
@@ -459,8 +463,8 @@ def main():
     # min_v = sed3[assemblage-1]
     # max_v = sedlim[1]
 
-    description = '1D likelihood surface: %s %s' % (title[assemblage-1],v1_title)
-    description2 = 'self.likelihoodWithDependence'
+    description = 'Marginal likelihood: %s assemblage, %s' % (title[assemblage-1],v1_title)
+    description2 = 'self.likelihoodWithProps'
     nCommunities = 3
     simtime = 8500
     xmlinput = 'input_synth.xml'
