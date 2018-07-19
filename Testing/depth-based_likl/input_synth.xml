@@ -32,7 +32,7 @@
 			<name>Shallow</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
                  considered population of Community (Malthusian parameter). -->
-			<malthus>0.1</malthus>
+			<malthus>0.08</malthus>
 			<!-- Initial population number for considered Community. -->
 			<population>0.</population>
 			<!-- Community maximum production rate for considered Community [m/y]. -->
@@ -46,7 +46,7 @@
 			<name>Mod-deep</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
 				 considered population of Community (Malthusian parameter). -->
-			<malthus>0.1</malthus>
+			<malthus>0.08</malthus>
 			<!-- Initial population number for considered Community. -->
 			<population>0.</population>
 			<!-- Community maximum production rate for considered Community [m/y]. -->
@@ -60,7 +60,7 @@
 			<name>Deep</name>
 			<!-- Definition of intrinsic rate of increase/decrease of the
 				 considered population of Community (Malthusian parameter). -->
-			<malthus>0.1</malthus>
+			<malthus>0.08</malthus>
 			<!-- Initial population number for considered Community. -->
 			<population>0.</population>
 			<!-- Community maximum production rate for considered Community [m/y]. -->

@@ -16,8 +16,8 @@ from cycler import cycler
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-# from matplotlib import cm
-from matplotlib.cm import terrain, plasma, Set2
+from matplotlib import cm
+from matplotlib.cm import viridis
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.mplot3d import Axes3D
@@ -45,8 +45,6 @@ class MCMC():
         
         self.font = 10
         self.width = 1
-        self.colors = terrain(np.linspace(0, 1.8, 14)) #len(reef.core.coralH)+10))
-        self.colors2 = plasma(np.linspace(0, 1, 174)) #len(reef.core.layTime)+3))
         self.d_sedprop = float(np.count_nonzero(gt_prop_t[:,communities]))/gt_prop_t.shape[0]
         
         self.filename = filename
@@ -239,75 +237,106 @@ class MCMC():
 
         font = self.font
         width = self.width
-        X = v1
-        Y = v2
+
+        fig = plt.figure(figsize=(8,8))
+        ax = fig.add_subplot(111)
+        ax.spines['top'].set_color('none')
+        ax.spines['bottom'].set_color('none')
+        ax.spines['left'].set_color('none')
+        ax.spines['right'].set_color('none')
+        ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+        ax.set_title('Joint Likelihood', fontsize=  font+2)#, y=1.02)
+
+        ax1 = fig.add_subplot(211, projection = '3d')
+
+        X = v2
+        Y = v1
         # R = X/Y
-        X, Y = np.meshgrid(X, Y)
+        X, Y = np.meshgrid(X,Y)
         Z = likelihood
 
-        surf = go.Surface(
-            x=X, 
-            y=Y, 
-            z=Z,
-            colorscale='Viridis'
-            # mode='markers',
-            # marker=dict(
-            #     size=12, 
-            #     color=Z, 
-            #     colorscale='Viridis',
-            #     opacity=0.8,
-            #     showscale=True
-            #     )
-            )
-        data = [surf]
-        layout = go.Layout(
-            title='%s' % self.description,
-            autosize=True,
-            width=1000,
-            height=1000,
-            scene=Scene(
-                xaxis=XAxis(
-                    title='%s' % self.var1_title,
-                    nticks=10,
-                    gridcolor='rgb(255, 255, 255)',
-                    gridwidth=2,
-                    zerolinecolor='rgb(255, 255, 255)',
-                    zerolinewidth=2
-                    ),
-                yaxis=YAxis(
-                    title='%s' % self.var2_title,
-                    nticks=10,
-                    gridcolor='rgb(255, 255, 255)',
-                    gridwidth=2,
-                    zerolinecolor='rgb(255, 255, 255)',
-                    zerolinewidth=2
-                    ),
-                zaxis=ZAxis(
-                    title='Likelihood'
-                    ),
-                bgcolor="rgb(244, 244, 248)"
-                )
-            )
+        print 'X shape ', X, 'Y shape ', Y, 'Z shape ', Z
+        np.savetxt('%s/X.txt' % fname, X)
+        np.savetxt('%s/Y.txt' % fname, Y)
+        np.savetxt('%s/Z.txt' % fname, Z)
+        surf = ax1.plot_surface(X,Y,Z, cmap=cm.viridis, linewidth=0, antialiased=False)
+        ax1.set_xlabel('\n%s' % self.var2_title, fontsize=font+2, linespacing=2.0)
+        ax1.set_ylabel('\n%s' % self.var1_title, fontsize=font+2, linespacing=2.0)
+        ax1.set_zlabel('\nLog likelihood', fontsize=font+2, linespacing=1.5)
+        ax1.set_zlim(Z.min(), Z.max())
+        ax1.zaxis.set_major_locator(LinearLocator(10))
+        # ax1.zaxis.set_major_formatter(FormatStrFormatter('%.05f'))
+        fig.colorbar(surf, shrink=0.5, aspect=5)
+        plt.tight_layout(pad=2.0)
+        plt.savefig('%s/plot.png'% (fname), bbox_inches='tight', dpi=300, transparent=False)
+        plt.show()
 
-        fig = go.Figure(data=data, layout=layout)
-        graph=plotly.offline.plot(fig, 
-            auto_open=False, 
-            output_type='file',
-            filename= '%s/3d-likelihood-surface.html' % (self.filename),
-            validate=False
-            )
 
-    def save_params(self, v1, v2, likl, diff, rmse):    
+        # surf = go.Surface(
+        #     x=X, 
+        #     y=Y, 
+        #     z=Z,
+        #     colorscale='Viridis'
+        #     # mode='markers',
+        #     # marker=dict(
+        #     #     size=12, 
+        #     #     color=Z, 
+        #     #     colorscale='Viridis',
+        #     #     opacity=0.8,
+        #     #     showscale=True
+        #     #     )
+        #     )
+        # data = [surf]
+        # layout = go.Layout(
+        #     title='%s' % self.description,
+        #     autosize=True,
+        #     width=1000,
+        #     height=1000,
+        #     scene=Scene(
+        #         xaxis=XAxis(
+        #             title='%s' % self.var2_title,
+        #             nticks=10,
+        #             gridcolor='rgb(255, 255, 255)',
+        #             gridwidth=2,
+        #             zerolinecolor='rgb(255, 255, 255)',
+        #             zerolinewidth=2
+        #             ),
+        #         yaxis=YAxis(
+        #             title='%s' % self.var1_title,
+        #             nticks=10,
+        #             gridcolor='rgb(255, 255, 255)',
+        #             gridwidth=2,
+        #             zerolinecolor='rgb(255, 255, 255)',
+        #             zerolinewidth=2
+        #             ),
+        #         zaxis=ZAxis(
+        #             title='Log likelihood'
+        #             ),
+        #         bgcolor="rgb(244, 244, 248)"
+        #         )
+        #     )
+
+        # fig = go.Figure(data=data, layout=layout)
+        # graph=plotly.offline.plot(fig, 
+        #     auto_open=False, 
+        #     output_type='file',
+        #     filename= '%s/3d-likelihood-surface.html' % (self.filename),
+        #     validate=False
+        #     )
+
+    def save_params(self, v1, v2, likl, diff):    
         ### SAVE RECORD OF ACCEPTED PARAMETERS ###  
         if not os.path.isfile(('%s/data.csv' % (self.filename))):
             with file(('%s/data.csv' % (self.filename)),'wb') as outfile:
                 writer = csv.writer(outfile, delimiter=',')
-                data = [v1, v2, likl, diff, rmse]
+                titles = ["v1", "v2", "likl", "diff"]
+                writer.writerow(titles)
+                data = [v1, v2, likl, diff]
                 writer.writerow(data)
         else:
             with file(('%s/data.csv' % (self.filename)),'ab') as outfile:
                 writer = csv.writer(outfile, delimiter=',')
-                data = [v1, v2, likl, diff, rmse]
+                data = [v1, v2, likl, diff]
                 writer.writerow(data)
 
 
@@ -342,19 +371,19 @@ class MCMC():
         print 's_v1', s_v1
         print 's_v2', s_v2
         # Create storage for data
-        pos_likl = np.zeros((s_v1.shape[0],s_v2.shape[0]))
-        pos_v1 = np.zeros(dimension)
-        pos_v2 = np.zeros(dimension) 
-        pos_diff = np.zeros(dimension)
-        pos_rmse = np.zeros(dimension)
+        pos_likl = np.full((s_v1.shape[0],s_v2.shape[0]), np.nan)
+        pos_v1 = np.full(dimension, np.nan)
+        pos_v2 = np.full(dimension, np.nan)
+        pos_diff = np.full(dimension, np.nan)
+        pos_rmse = np.full(dimension, np.nan)
         
-        S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
+        # S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
 
         start = time.time()
         i = 0
         for a in range(s_v1.shape[0]):
-            for b in range(s_v2.shape[0]):
-                # print 'sample: ', i
+            for b in np.arange(a,s_v2.shape[0]):
+                print 'sample: ', i
                 # print 'Variable 1: ', s_v1[a], 'Variable 2: ', s_v2[b]
                 # # Update parameters
                 # p_v1 = s_v1[a]
@@ -381,28 +410,15 @@ class MCMC():
                 # # self.saveCore(reef,i)
                 # i += 1
 
-                if b < a:
-                        print 'skip likelihood'
-                        #set pos_sed 2, pos_v2, pos_likl and pos_diff to -infinity because can't run.
-                        pos_diff[i] = np.nan
-                        pos_v1[i] = np.nan
-                        pos_v2[i] = np.nan
-                        pos_likl[a,b] = np.nan
-                        self.save_params(pos_v1[i], pos_v2[i], pos_likl[a,b], pos_diff[i], pos_rmse[i])
-
-                else:
+                if b >= a:
                     print '\n Variable 1: ', s_v1[a], 'Variable 2: ', s_v2[b]
-
                     # Update parameters
                     p_v1 = s_v1[a]
                     p_v2 = s_v2[b]
 
-
                     # Substitute generated variables into proposal vector 
-                    flow1[assemblage-1] = p_v1
-                    flow2[assemblage-1] = p_v2
-                    # print 'sed2', sed2
-                    # print 'sed3', sed3
+                    flow2[assemblage-1] = p_v1
+                    flow3[assemblage-1] = p_v2
                     
                     # Proposal to be passed to runModel
                     v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
@@ -415,9 +431,10 @@ class MCMC():
                     pos_v1[i] = p_v1
                     pos_v2[i] = p_v2
                     pos_likl[a,b] = likelihood
-                    self.save_params(pos_v1[i], pos_v2[i], pos_likl[a,b], pos_diff[i], pos_rmse[i])
+                    self.save_params(pos_v1[i], pos_v2[i], pos_likl[a,b], pos_diff[i])
                 i += 1
-
+        pos_likl[pos_likl == -inf] = -1234.50391409028 #-723.429630792182
+        pos_likl[np.isnan(pos_likl)] = -1234.50391409028 #-723.429630792182
         end = time.time()
         total_time = end - start
         self.plotFunctions(self.filename, s_v1, s_v2, pos_likl)
@@ -430,10 +447,10 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 200
+    samples= 100
     titles = ['Shallow', 'Mod-deep', 'Deep']
     assemblage= 2
-    sedlim = [0., 0.003]
+    sedlim = [0., 0.005]
     flowlim = [0.,0.3]
 
     sed1=[0.0009, 0.0015, 0.0023]
@@ -445,29 +462,29 @@ def main():
     flow3=[0.259, 0.172, 0.058] 
     flow4=[0.288, 0.185, 0.066] 
 
-    v1 = 'Flow 1'
-    v1_title = '1'
-    v1_min, v1_max = flowlim[0], flow3[assemblage-1]
+    # v1 = 'Flow 1'
+    # v1_title = r'$f_{flow}^1$'
+    # v1_min, v1_max = flowlim[0], flow3[assemblage-1]
 
-    v2 = 'Flow 2'
-    v2_title = '2'
-    v2_min, v2_max = flowlim[0], flow3[assemblage-1]
+    # v2 = 'Flow 2'
+    # v2_title = r'$f_{flow}^2$'
+    # v2_min, v2_max = flowlim[0], flow3[assemblage-1]
 
-    # v1 = 'Flow 2'
-    # v1_title = '2'
-    # v1_min, v1_max = flow1[assemblage-1], flow4[assemblage-1]
+    v1 = 'Flow 2'
+    v1_title = r'$f_{flow}^2$'
+    v1_min, v1_max = flow1[assemblage-1], flow4[assemblage-1]
     
-    # v2 = 'Flow 3'
-    # v2_title = '3'
-    # v2_min, v2_max = flow1[assemblage-1], flow4[assemblage-1]
+    v2 = 'Flow 3'
+    v2_title = r'$f_{flow}^3$'
+    v2_min, v2_max = flow1[assemblage-1], flow4[assemblage-1]
 
     # v1 = 'Flow 3'
-    # v1_title = '3'
-    # v1_min, v1_max = flow2[assemblage-1], flow4[assemblage-1]
+    # v1_title = r'$f_{flow}^3$'
+    # v1_min, v1_max = flow2[assemblage-1], flowlim[1]
 
     # v2 = 'Flow 4'
-    # v2_title = '4'
-    # v2_min, v2_max = flow3[assemblage-1], flowlim[1]
+    # v2_title = r'$f_{flow}^4$'
+    # v2_min, v2_max = flow2[assemblage-1], flowlim[1]
 
     # v2 = 'Sub-/Super-diagonal'
     # v2_title = 'a_s' #r'{$\alpha_s$}'
@@ -512,6 +529,7 @@ def main():
     [pos_v1, pos_v2, pos_likl] = mcmc.likelihood_surface()
 
     print 'Successfully sampled'
+    print 'Saved in %s' % filename
     
     print 'Finished producing Likelihood Surface'
 if __name__ == "__main__": main()

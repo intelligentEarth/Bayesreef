@@ -1,0 +1,11 @@
+Script: mcmc_multinomial_constrained.py
+Description: depth-based likelihood, self.likelihoodWithProps
+Simulation time: 8500 yrs
+No. samples: 20000
+XML input: input_synth.xml
+Data files: data/synth_core_vec_d_08.txt, data/synth_core_prop_d_08.txt
+Stepsize as percentage of prior range: 1.0 %
+step_m: 0.0015
+step_a: 0.0015
+step_sed: 5e-05
+step_flow: 0.003

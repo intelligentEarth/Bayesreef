@@ -208,6 +208,7 @@ class MCMC():
         rmse = self.rmse(sim_prop_t5, gt_prop_t)
         # sim_vec_t = self.convertCoreFormat(sim_prop_t5)
         # sim_vec_d = self.convertCoreFormat(sim_prop_d.T)
+        # likelihood = np.exp(likelihood)
         return [likelihood, diff, rmse, sim_prop_t5]
            
     def likelihoodWithDominance(self, reef, gt_prop_t, input_v):
@@ -389,7 +390,7 @@ class MCMC():
 
 
             # USER DEFINED: Substitute generated variables into proposal vector 
-            flow4[assemblage-1] = p_v1
+            flow1[assemblage-1] = p_v1
             
             # Proposal to be passed to runModel
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
@@ -419,7 +420,7 @@ def main():
 
     # USER DEFINED: parameter names and plot titles.
     samples= 200
-    assemblage= 1
+    assemblage= 2
 
     title = ['Shallow', 'Mod-deep', 'Deep'] 
     sed1=[0.0009, 0.0015, 0.0023]
@@ -430,14 +431,14 @@ def main():
     flow2=[0.082, 0.051, 0.]
     flow3=[0.259, 0.172, 0.058] 
     flow4=[0.288, 0.185, 0.066]
-    sedlim = [0., 0.003]
+    sedlim = [0., 0.005]
     flowlim = [0.,0.3]
 
-    v1_title = r'$f_{flow}^4$'
+    v1_title = r'$f_{flow}^1$'
     v1 = 'Hydrodynamic energy threshold:\n %s assemblage (%s)' % (title[assemblage-1],v1_title)
     
-    # min_v = flowlim[0]
-    # max_v = flow2[assemblage-1]
+    min_v = flowlim[0]
+    max_v = flow2[assemblage-1]
 
     # min_v = flow1[assemblage-1]
     # max_v = flow3[assemblage-1]
@@ -445,8 +446,8 @@ def main():
     # min_v = flow2[assemblage-1]
     # max_v = flow4[assemblage-1]
 
-    min_v = flow3[assemblage-1]
-    max_v = flowlim[1]
+    # min_v = flow3[assemblage-1]
+    # max_v = flowlim[1]
 
     # v1_title = r'$f_{sed}^4$'
     # v1 = 'Sediment exposure threshold:\n %s assemblage (%s)' % (title[assemblage-1], v1_title)

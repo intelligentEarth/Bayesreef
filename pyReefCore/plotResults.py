@@ -18,6 +18,87 @@ import scipy as sp
 from scipy import stats 
 import matplotlib.pyplot as plt
 
+# def plotInitialPredictionDepth(filedir, gt, init, y_vals, x_labels, x_values):
+
+#     fig = plt.figure(figsize=(3,4))
+#     suptitle = fig.suptitle('Initial Prediction')
+#     ax1 = fig.add_subplot(121)
+#     ax1.set_facecolor('#f2f2f3')
+#     ax1.plot(gt,y_vals, label='Ground truth', color='k',linewidth=0.7)
+#     ax1.plot(init, y_vals, label='Initial prediction',linewidth=0.7)
+#     ax1.set_ylabel('Depth [m]')
+#     ax1.set_ylim([0,np.amax(y_vals)])
+#     ax1.set_ylim(ax1.get_ylim()[::-1])
+#     ax1.set_xticks(x_values)
+#     ax1.set_xticklabels(x_labels, rotation=70)
+#     lgd = fig.legend(frameon=False,bbox_to_anchor = (0.7,0.093)) #, prop={'size':font+1},bbox_to_anchor = (1.,1.))
+#     plt.tight_layout(pad=2.0)
+#     fig.savefig('%s/initpred.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
+#     plt.close('all')
+
+# def plotPosCoreDepth(filedir, pos_samples, gt, y_vals, x_labels, x_values, font):
+
+#     mu = pos_samples.mean(axis=0)
+#     high = np.percentile(pos_samples, 95, axis=0)
+#     low = np.percentile(pos_samples, 5, axis=0)
+
+#     fig = plt.figure(figsize=(2,4))
+#     suptitle = fig.suptitle('Mean prediction')
+#     ax1 = fig.add_subplot(111)
+#     ax1.set_facecolor('#f2f2f3')
+#     ax1.plot(gt, y_vals, label='Ground truth', color='k',linewidth=0.7)
+#     ax1.plot(mu, y_vals, label='Pred. (mean)',linestyle='--', linewidth=0.7)
+#     ax1.plot(high, y_vals, label='Pred. (5th %ile)',linestyle='--',linewidth=0.7)
+#     ax1.plot(low, y_vals, label='Pred. (95th %ile)',linestyle='--',linewidth=0.7)
+#     ax1.fill_betweenx(y_vals, low, high, facecolor='mediumaquamarine', alpha=0.4)
+#     ax1.set_ylabel('Depth [m]')
+#     ax1.set_ylim([0,np.amax(y_vals)])
+#     ax1.set_ylim(ax1.get_ylim()[::-1])
+#     ax1.set_xticks(x_values)
+#     ax1.set_xticklabels(x_labels, rotation=70)
+#     lgd = fig.legend(frameon=False,bbox_to_anchor = (0.9,0.19), borderpad=2., prop={'size':font-3})
+#     plt.tight_layout(pad=2.5)
+#     fig.savefig('%s/mcmcres.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
+#     plt.close('all')
+
+def plotInitialPrediction(filedir, gt_1, gt_2, init_1, init_2, y_1, y_2,x_labels, x_values):
+    # init_2 = init_2[::-1]
+    # gt_2 = gt_2[::-1]
+    # y_2 = y_2[::-1]
+    fig = plt.figure(figsize=(4,4))
+    suptitle = fig.suptitle('Initial Prediction')
+    ax1 = fig.add_subplot(121)
+    ax1.set_facecolor('#f2f2f3')
+    ax1.plot(gt_1,y_1, label='Ground truth', color='k',linewidth=0.7)
+    ax1.plot(init_1, y_1, label='Initial prediction',linewidth=0.7)
+    ax1.set_ylabel('Depth [m]')
+    ax1.set_ylim([0,np.amax(y_1)])
+    ax1.set_ylim(ax1.get_ylim()[::-1])
+    ax1.set_xticks(x_values)
+    ax1.set_xticklabels(x_labels, rotation=70)
+    
+    ax2 = fig.add_subplot(122)
+    ax2.set_facecolor('#f2f2f3')
+    ax2.plot(gt_2,y_2, color='k',linewidth=0.7)
+    ax2.plot(init_2, y_2,linewidth=0.7)
+    ax2.set_ylabel('Simulation time [yrs]')
+    ax2.set_ylim([0,np.amax(y_2)])
+    ax2.set_ylim(ax2.get_ylim())#[::-1])
+    ax2.set_xticks(x_values)
+    ax2.set_xticklabels(x_labels, rotation=70)
+    lgd = fig.legend(frameon=False,bbox_to_anchor = (0.95,0.093)) #, prop={'size':font+1},bbox_to_anchor = (1.,1.))
+    plt.tight_layout(pad=2.0)
+    fig.savefig('%s/initpred.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
+    plt.close('all')
+
+# def meanConfidenceInterval(data,confidence=95):
+#     a = 1.0*np.array(data)
+#     print 'array of data', a, 'data', data
+#     n = len(a)
+#     m, se = np.mean(a), sp.stats.sem(a)
+#     h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+#     return m, m-h, m+h
+
 def plotPosCore(filedir, pos_samples_1, pos_samples_2, gt_1, gt_2, y_1, y_2, x_labels, x_values, font):
 
     # gt_2 = gt_2[::-1]
@@ -61,43 +142,6 @@ def plotPosCore(filedir, pos_samples_1, pos_samples_2, gt_1, gt_2, y_1, y_2, x_l
     fig.savefig('%s/mcmcres.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
     plt.close('all')
 
-def plotInitialPrediction(filedir, gt_1, gt_2, init_1, init_2, y_1, y_2,x_labels, x_values):
-    # init_2 = init_2[::-1]
-    # gt_2 = gt_2[::-1]
-    # y_2 = y_2[::-1]
-    fig = plt.figure(figsize=(4,4))
-    suptitle = fig.suptitle('Initial Prediction')
-    ax1 = fig.add_subplot(121)
-    ax1.set_facecolor('#f2f2f3')
-    ax1.plot(gt_1,y_1, label='Ground truth', color='k',linewidth=0.7)
-    ax1.plot(init_1, y_1, label='Initial prediction',linewidth=0.7)
-    ax1.set_ylabel('Depth [m]')
-    ax1.set_ylim([0,np.amax(y_1)])
-    ax1.set_ylim(ax1.get_ylim()[::-1])
-    ax1.set_xticks(x_values)
-    ax1.set_xticklabels(x_labels, rotation=70)
-    
-    ax2 = fig.add_subplot(122)
-    ax2.set_facecolor('#f2f2f3')
-    ax2.plot(gt_2,y_2, color='k',linewidth=0.7)
-    ax2.plot(init_2, y_2,linewidth=0.7)
-    ax2.set_ylabel('Simulation time [yrs]')
-    ax2.set_ylim([0,np.amax(y_2)])
-    ax2.set_ylim(ax2.get_ylim())#[::-1])
-    ax2.set_xticks(x_values)
-    ax2.set_xticklabels(x_labels, rotation=70)
-    lgd = fig.legend(frameon=False,bbox_to_anchor = (0.95,0.093)) #, prop={'size':font+1},bbox_to_anchor = (1.,1.))
-    plt.tight_layout(pad=2.0)
-    fig.savefig('%s/initpred.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
-    plt.close('all')
-
-# def meanConfidenceInterval(data,confidence=95):
-#     a = 1.0*np.array(data)
-#     print 'array of data', a, 'data', data
-#     n = len(a)
-#     m, se = np.mean(a), sp.stats.sem(a)
-#     h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
-#     return m, m-h, m+h
 
 def plotLiklAndDiff(pos_likl,pos_diff, s_range, font, filename):
     fig = plt.figure(figsize=(6,3))
@@ -123,7 +167,7 @@ def plotLiklAndDiff(pos_likl,pos_diff, s_range, font, filename):
     plt.savefig('%s/evol_likl.png' % (filename), bbox_inches='tight',dpi=300,transparent=False)
     plt.close()
 
-def plotParameters(fname, s_range, sedsim, flowsim,communities, 
+def plotParameters(fname, assemblage, s_range, sedsim, flowsim,communities, 
     pos_m, pos_ax, pos_ay, true_m, true_ax, true_ay,
     pos_sed1, pos_sed2, pos_sed3, pos_sed4, true_sed,
     pos_flow1, pos_flow2, pos_flow3, pos_flow4,true_flow,font,width):
@@ -148,7 +192,7 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     ax.spines['left'].set_color('none')
     ax.spines['right'].set_color('none')
     ax.tick_params(labelcolor='w', top=False, bottom=False, left=False, right=False)
-    ax.set_title(r'Density histogram of $\varepsilon$', fontsize= font+1)#, y=1.02)
+    ax.set_title(r'Malthusian parameter ($\varepsilon$)', fontsize= font+1)#, y=1.02)
     
     ax1 = fig.add_subplot(211)
     ax1.set_facecolor('#f2f2f3')
@@ -157,7 +201,8 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     ax1.grid(True)
     ax1.set_ylabel('Frequency',size=font+1)
     ax1.set_xlabel(r'$\varepsilon$', size=font+1)
-    
+    plt.xticks(rotation=30)
+
     ax2 = fig.add_subplot(212)
     ax2.set_facecolor('#f2f2f3')
     ax2.plot(s_range,pos_m,linestyle='-', linewidth=width, color='k', label=None)
@@ -211,6 +256,9 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     ax1.set_ylabel('Frequency',size=font+1)
     ax1.set_title(r'Main diagonal ($\alpha_{m}$)',size=font+1)
     ax1.set_xlabel(r'$\alpha_{m}$', size=font+1)
+    plt.xticks(rotation=30)
+    # for tick in ax1.get_xticklabels():
+    # tick.set_rotation(30)
     ax2 = fig.add_subplot(212)
     ax2.set_facecolor('#f2f2f3')
     ax2.plot(s_range,pos_ax,linestyle='-', linewidth=width, color='k', label=None)
@@ -242,6 +290,7 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
     ax1.set_title(r'Super- and sub-diagonal values ($\alpha_{s}$)',size=font+1)
     ax1.set_xlabel(r'$\alpha_{s}$', size=font+1)
     ax1.set_ylabel('Frequency',size=font+1)
+    plt.xticks(rotation=30)
     ax2 = fig.add_subplot(212)
     ax2.set_facecolor('#f2f2f3')
     ax2.plot(s_range,pos_ay,linestyle='-', linewidth=width, color='k', label=None)
@@ -332,6 +381,8 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
             ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1, color='darksalmon',mfc='darksalmon',fmt='.',label=None)
             ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1, color='sienna',mfc='sienna',fmt='.',label=None)
             plt.ylabel('Proportion of maximum growth rate [%]',size=font+1)
+            # locs,labels = plt.xticks()
+            plt.xticks(rotation=30)
             plt.xlabel('Sediment input [m/year]',size=font+1)
             plt.ylim(-2.,110)
             if a+1 == 1:
@@ -339,8 +390,8 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
             else:
                 plt.title('%s assemblage' % (a_labels[a]), size=font+1, y=1.06)
 
-            if a+1 == 3:
-                lgd = plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,-0.2))
+            if a+1 == assemblage:
+                lgd = plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,-0.3))
                 plt.savefig('%s/sediment_response_%s.png' % (fname, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=False)
             else: 
                 plt.savefig('%s/sediment_response_%s.png' % (fname, a+1),bbox_inches='tight',dpi=300,transparent=False)
@@ -461,7 +512,7 @@ def plotParameters(fname, s_range, sedsim, flowsim,communities,
                 plt.title('Hydrodynamic energy exposure threshold function\n%s assemblage' % (a_labels[a]), size=font+1, y=1.06)
             else:
                 plt.title('%s assemblage' % (a_labels[a]), size=font+1, y=1.06)
-            if a+1 == 3:
+            if a+1 == assemblage:
                 lgd = plt.legend(frameon=False, prop={'size':font+1}, bbox_to_anchor = (1.,-0.2))
                 plt.savefig('%s/flow_response_%s.png' % (fname, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
             else: 

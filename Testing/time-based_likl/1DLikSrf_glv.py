@@ -208,6 +208,8 @@ class MCMC():
         rmse = self.rmse(sim_prop_t5, gt_prop_t)
         # sim_vec_t = self.convertCoreFormat(sim_prop_t5)
         # sim_vec_d = self.convertCoreFormat(sim_prop_d.T)
+        # likelihood = np.exp(likelihood)
+
         return [likelihood, diff, rmse, sim_prop_t5]
            
     def likelihoodWithDominance(self, reef, gt_prop_t, input_v):
@@ -242,7 +244,7 @@ class MCMC():
         ax1.set_title('%s' % self.description, fontsize= font+1)#, y=1.02)
         ax1.set_facecolor('#f2f2f3')
         ax1.set_xlabel('%s' % self.var1_title)
-        ax1.set_ylabel('Likelihood')
+        ax1.set_ylabel('Log likelihood')
         ax1.plot(X,Y)
         ax1.set_xlim(X.min(), X.max())
         fig.tight_layout()
@@ -391,9 +393,9 @@ class MCMC():
             # Proposal to be passed to runModel
             v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
             v_proposal = np.append(v_proposal,(ax,ay,m))
-            S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
-            [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
-            # [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t,v_proposal)
+            # S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
+            # [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+            [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t,v_proposal)
             print 'Likelihood:', likelihood, 'and difference score:', diff
             pos_v1[i] = p_v1
             pos_likl[i] = likelihood
@@ -434,7 +436,7 @@ def main():
     max_v = 0
 
     description = 'Marginal likelihood: %s' % v1
-    description2 = 'self.likelihoodWithDependence'
+    description2 = 'self.likelihoodWithProps'
     nCommunities = 3
     simtime = 8500
     xmlinput = 'input_synth.xml'
@@ -446,7 +448,7 @@ def main():
     gt_timelay = gt_timelay[::-1]
     vis = [False, False]
     sedsim, flowsim = True, True
-    sedlim = [0., 0.003]
+    sedlim = [0., 0.005]
     flowlim = [0.,0.3]
     
     run_nb = 0

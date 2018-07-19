@@ -61,7 +61,7 @@ reef = Model()
 # - the intrinsic rate of a population species $\epsilon$
 # - the interaction coefficients among the species association $\alpha$
 
-filename = 'input_synth.xml'
+filename = 'input_synth_test.xml'
 
 reef.load_xml(filename, False, False)
 

@@ -16,7 +16,7 @@ from cycler import cycler
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-# from matplotlib import cm
+from matplotlib import cm
 from matplotlib.cm import terrain, plasma, Set2
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -171,7 +171,7 @@ class MCMC():
         if S != S_star:
             likelihood=0
             diff = 100
-            rmse = 100
+            rmse =100
             return [likelihood, diff, rmse, sim_prop_t5]
         # Likelihood for cutpoints conditional on S_star
         likl_cpts_star = np.zeros(S_star)
@@ -239,11 +239,40 @@ class MCMC():
 
         font = self.font
         width = self.width
-        X = v1
-        Y = v2
+
+        # fig = plt.figure(figsize=(8,8))
+        # ax = fig.add_subplot(111)
+        # ax.spines['top'].set_color('none')
+        # ax.spines['bottom'].set_color('none')
+        # ax.spines['left'].set_color('none')
+        # ax.spines['right'].set_color('none')
+        # ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+        # ax.set_title('Joint Likelihood', fontsize=  font+2)#, y=1.02)
+
+        # ax1 = fig.add_subplot(211, projection = '3d')
+
+        X = v2
+        Y = v1
         # R = X/Y
-        X, Y = np.meshgrid(X, Y)
+        X, Y = np.meshgrid(X,Y)
         Z = likelihood
+
+        print 'X shape ', X, 'Y shape ', Y, 'Z shape ', Z
+        np.savetxt('%s/X.txt' % fname, X)
+        np.savetxt('%s/Y.txt' % fname, Y)
+        np.savetxt('%s/Z.txt' % fname, Z)
+        # surf = ax1.plot_surface(X,Y,Z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        # ax1.set_xlabel('%s' % self.var2_title)
+        # ax1.set_ylabel('%s' % self.var1_title)
+        # ax1.set_zlabel('Log likelihood')
+        # ax1.set_zlim(Z.min(), Z.max())
+        # ax1.zaxis.set_major_locator(LinearLocator(10))
+        # # ax1.zaxis.set_major_formatter(FormatStrFormatter('%.05f'))
+        # fig.colorbar(surf, shrink=0.5, aspect=5)
+        # plt.tight_layout(pad=2.0)
+        # plt.savefig('%s/plot.png'% (fname), bbox_inches='tight', dpi=300, transparent=False)
+        # plt.show()
+
 
         surf = go.Surface(
             x=X, 
@@ -267,14 +296,6 @@ class MCMC():
             height=1000,
             scene=Scene(
                 xaxis=XAxis(
-                    title='%s' % self.var1_title,
-                    nticks=10,
-                    gridcolor='rgb(255, 255, 255)',
-                    gridwidth=2,
-                    zerolinecolor='rgb(255, 255, 255)',
-                    zerolinewidth=2
-                    ),
-                yaxis=YAxis(
                     title='%s' % self.var2_title,
                     nticks=10,
                     gridcolor='rgb(255, 255, 255)',
@@ -282,8 +303,16 @@ class MCMC():
                     zerolinecolor='rgb(255, 255, 255)',
                     zerolinewidth=2
                     ),
+                yaxis=YAxis(
+                    title='%s' % self.var1_title,
+                    nticks=10,
+                    gridcolor='rgb(255, 255, 255)',
+                    gridwidth=2,
+                    zerolinecolor='rgb(255, 255, 255)',
+                    zerolinewidth=2
+                    ),
                 zaxis=ZAxis(
-                    title='Likelihood'
+                    title='Log likelihood'
                     ),
                 bgcolor="rgb(244, 244, 248)"
                 )
@@ -302,6 +331,8 @@ class MCMC():
         if not os.path.isfile(('%s/data.csv' % (self.filename))):
             with file(('%s/data.csv' % (self.filename)),'wb') as outfile:
                 writer = csv.writer(outfile, delimiter=',')
+                titles = ["v1", "v2", "likl", "diff", "rmse"]
+                writer.writerow(titles)
                 data = [v1, v2, likl, diff, rmse]
                 writer.writerow(data)
         else:
@@ -341,14 +372,16 @@ class MCMC():
         s_v2 = np.linspace(v2_p1, v2_p2, num=samples, endpoint=True)
         print 's_v1', s_v1
         print 's_v2', s_v2
+        dimx = s_v1.shape[0]
+        dimy = s_v2.shape[0]
         # Create storage for data
-        pos_likl = np.zeros((s_v1.shape[0],s_v2.shape[0]))
+        pos_likl = np.zeros((dimx,dimy))
         pos_v1 = np.zeros(dimension)
         pos_v2 = np.zeros(dimension) 
         pos_diff = np.zeros(dimension)
         pos_rmse = np.zeros(dimension)
         
-        S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
+        # S_star, cpts_star, ca_props_star = self.modelOutputParameters(self.gt_prop_t,self.gt_vec_t,self.gt_timelay)
 
         start = time.time()
         i = 0
@@ -368,8 +401,8 @@ class MCMC():
                 v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
                 v_proposal = np.append(v_proposal,(ax,ay,m))
                 
-                [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
-                # [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t, v_proposal)
+                # [likelihood, diff, rmse, pred_data] = self.likelihoodWithDependence(reef, v_proposal, S_star, cpts_star, ca_props_star)
+                [likelihood, diff, rmse, pred_data] = self.likelihoodWithProps(reef, self.gt_prop_t, v_proposal)
                 print 'Likelihood:', likelihood, 'and difference score:', diff
                 
 
@@ -431,7 +464,7 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 30
+    samples= 100
     assemblage= 2
 
     v1 = 'Malthusian parameter'
@@ -443,11 +476,11 @@ def main():
     # v2_min, v2_max = -0.15, 0.
 
     v2 = 'Sub-/Super-diagonal'
-    v2_title = 'a_s' #r'{$\alpha_s$}'
+    v2_title = r'$\alpha_s$'
     v2_min, v2_max = -0.15, 0.
 
     description = '3D likelihood surface, %s & %s' % (v1, v2)
-    description2 = 'self.likelihoodWithDependence'
+    description2 = 'self.likelihoodWithProps'
     nCommunities = 3
     simtime = 8500
     xmlinput = 'input_synth.xml'
@@ -459,7 +492,7 @@ def main():
     gt_timelay = gt_timelay[::-1]
     vis = [False, False]
     sedsim, flowsim = True, True
-    sedlim = [0., 0.003]
+    sedlim = [0., 0.005]
     flowlim = [0.,0.3]
     
     run_nb = 0
