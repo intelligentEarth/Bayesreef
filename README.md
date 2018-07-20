@@ -33,14 +33,13 @@ Data about the **depth structure** or the **time structure** of a core can be us
 
 ## Installation
 
-### Local install
-
 The code is available from our github [page](https://github.com/pyReef-model/BayesReef.git) and can be obtained either from this page or using **git clone**
 ```
 git clone https://github.com/pyReef-model/BayesReef.git
 ```
+Download the prerequisite python packages provided in the ***installation.txt*** file.
 
-Once donwloaded, navigate to the **BayesReef** folder and run the following command:
+Once donwloaded, navigate to the ***BayesReef*** folder and run the following command:
 ```
 pip install -e /workspace/volume/pyReefCore/
 ```
