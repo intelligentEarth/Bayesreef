@@ -1,0 +1,31 @@
+Installation Instructions: 
+ 
+To run this you must have python installed on your system. This particular repository is written in Python 2.7 
+ 
+Step 0: Required packages 
+ 
+* sudo apt-get install python python-numpy python-scipy python-setuptools python-matplotlib 
+* sudo apt-get update -y 
+* sudo apt-get install -y git python-pip python-dev libzmq3-dev pkg-config libfreetype6-dev libpng3 libopenmpi-dev openmpi-bin libhdf5-dev liblapack-dev llvm-3.6 libedit-dev gfortran 
+* sudo pip install -U setuptools 
+* sudo pip install -U pip # fixes AssertionError in Ubuntu pip 
+* sudo pip install enum34 jupyter markupsafe zmq singledispatch backports_abc certifi jsonschema ipyparallel path.py matplotlib mpi4py==1.3.1 git+https://github.com/badlands-model/triangle pandas plotly 
+* sudo apt-get install -y libnetcdf-dev python-mpltoolkits.basemap 
+* sudo pip install Cython==0.20 h5py scipy numpy numba==0.23.1 netcdf4 colorlover cmocean scikit-fuzzy pyevtk 
+* sudo pip install ez_setup 
+* sudo pip install -e git+https://github.com/hplgit/odespy.git#egg=odespy 
+* git clone https://github.com/awickert/gFlex 
+  cd gFlex 
+  sudo python setup.py install 
+ 
+** 
+ 
+Step 1: Clone BayesReef Repository 
+  git clone https://github.com/pyReef-model/BayesReef.git 
+ 
+Step 2: Install BayesLands 
+  sudo pip install -e BayesReef 
+ 
+Step 3: Compile all files 
+  cd pyReefCore 
+  python -m compileall . 
