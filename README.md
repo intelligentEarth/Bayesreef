@@ -44,12 +44,27 @@ Once donwloaded, navigate to the ***BayesReef*** folder and run the following co
 pip install -e /workspace/volume/pyReefCore/
 ```
 
-## Usage
+## Basic Usage
 
 _BayesReef_ is initiated from python scripts directly with Python 2.7.
 
+To initiate _BayesReef_ using either time-based or depth-based inference, navigate to the ***Testing*** folder.
 
-***multinom_mcmc_t.py*** and ***multinom_mcmc_d.py*** are the main MCMC scripts from which to run BayesReef. There are 27 free parameters in these file, which includes:
+```
+cd BayesReef/Testing/
+```
+Within the ***Testing*** folder, there are two sub-directories: ***depth-based_likl*** which uses depth-based inferencea and ***time-based_likl*** which uses time-based inference. The main MCMC scripts within these folders are ***multinom_mcmc_t.py*** and ***multinom_mcmc_d.py***. 
+
+Set the number of iterates in _main_ and initiate _BayesReef_ using the command:
+
+```
+python multinom_mcmc_d.py
+```
+
+
+## Tailored usage
+
+The script ***multinom_mcmc_t.py*** offers parameterisation of 27 parameters, which include: 
 
 * Population dynamics parameters
   * Malthusian parameter &epsilon; 
@@ -65,24 +80,24 @@ _BayesReef_ is initiated from python scripts directly with Python 2.7.
   * _f_<sub>sed</sub><sup>3</sup>
   * _f_<sub>sed</sub><sup>4</sup>
 
+The user may wish to run experiments with lesser free parameters. ***multinom_mcmc_t_constrained.py*** and ***multinom_mcmc_d_constrained.py*** are similar to the main MCMC scripts, but offer up to 4 parameters to allow for low-dimensional experiments with _BayesReef_.
 
-With alteration, the code is capable of parameterising many other _pyReef-Core_ variables. 
+With simple adjustments to ***multinom_mcmc_d_constrained.py***, the user can parameterise any combination of those 27 parameters. 
+
+Other scripts in the _BayesReef_ package include: 
 
 
-***multinom_mcmc_t_constrained.py*** and ***multinom_mcmc_d_constrained.py*** are similar to the main MCMC scripts, but offer lesser free parameters (up to 4) to allow for low-dimensional experiments with _BayesReef_.
+ * ***input_synth.xml*** defines the fixed parameters in _pyReef-Core_. For a greater discussion on _pyReef-Core_, visit the Github repository [here](https://github.com/pyReef-model/pyReefCore).
 
+ * ***1DLikSrf_glv.py***  creates a figure of marginal likelihood (1-D) of population dynamics parameters.
 
-***input_synth.xml*** defines the fixed parameters in _pyReef-Core_. For a greater discussion on _pyReef-Core_, visit the Github repository [here](https://github.com/pyReef-model/pyReefCore).
+ * ***1DLikSrf_thres.py***  creates a figure of marginal likelihood (1-D) of environmental threshold parameters.
 
-***1DLikSrf_glv.py***  creates a figure of marginal likelihood (1-D) of population dynamics parameters.
+ * ***3DLikSrf_glv.py***  creates a figure of bivariate likelihood (3-D) of population dynamics parameters.
 
-***1DLikSrf_thres.py***  creates a figure of marginal likelihood (1-D) of environmental threshold parameters.
+ * ***3DLikSrf_thres.py***  creates a figure of bivariate likelihood (3-D) of environmental threshold parameters.
 
-***3DLikSrf_glv.py***  creates a figure of bivariate likelihood (3-D) of population dynamics parameters.
-
-***1DLikSrf_thres.py***  creates a figure of bivariate likelihood (3-D) of environmental threshold parameters.
-
-***runModel.py*** simulates a iteration of _pyReef-Core_ without the Bayesian inference framework. 
+ * ***runModel.py*** simulates a iteration of _pyReef-Core_ without the Bayesian inference framework. 
 
 ## Sample Output
 
@@ -99,7 +114,7 @@ With alteration, the code is capable of parameterising many other _pyReef-Core_ 
 ## License
 
 
-his program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 
@@ -107,7 +122,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 ## Reporting
 
-If you come accross a bug or if you need some help compiling or using the code you can drop us a line at: - jodierae.pall@gmail.com and rohitash.chandra@sydney.edu.au
+If you come accross a bug or if you need some help compiling or using the code you can drop us a line at jodierae.pall@gmail.com and rohitash.chandra@sydney.edu.au
 
 ## References
 
