@@ -5,7 +5,7 @@
 #Last edit       :19/07/2018
 #Version         :1.0
 #Usage           :python multinom_mcmc_t.py
-#Notes           :This script uses the time-structure of a core simulation (i.e. coralgal assemblage at each time interval of the simulation)
+#Notes           :This script uses the time-structure of a core simulation (i.e. coralgal assemblage at each 500 yr time interval of the simulation)
 #                 from pyReef-Core as the observed data. The observed data is used by the MCMC algorithm to find the posterior probability distribution of free parameters 
 #                 and model predictions. The amount of free parameters in this script is 27. 
 #                 This includes 3 population dynamics parameters and 24 environmental threshold parameters.
@@ -286,6 +286,8 @@ class MCMC():
         gt_vec_d = self.gt_vec_d
         gt_depths = self.gt_depths
         communities = self.communities
+        flowlim = self.flowlim
+        sedlim = self.sedlim
         
 
         with file(('%s/description.txt' % (self.filename)),'a') as outfile:
@@ -610,7 +612,7 @@ def main():
     description = 'Time-based likelihood. self.likelihoodWithDependence'
     assemblage = 2
     xmlinput = 'input_synth.xml'
-    gt_depths, gt_vec_d = np.genfromtxt('data/synthdata_d_vec_08.txt', usecols=(0,1), unpack=True)
+    gt_depths, gt_vec_d = np.genfromtxt('data/synthdata_d_vec_08_1.txt', usecols=(0,1), unpack=True)
     synth_data = 'data/synthdata_t_prop_08_1.txt'
     gt_prop_t = np.loadtxt(synth_data, usecols=(1,2,3,4,5)) 
     synth_vec = 'data/synthdata_t_vec_08_1.txt'

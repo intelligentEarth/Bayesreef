@@ -278,8 +278,8 @@ class modelPlot():
         # # print 'sedH', self.sedH.shape, self.sedH #4*171
         return propn_asmb_time.T, self.timeLay
 
-    def getTimePlotParameters(self, colors=None):
-        return self.timeCarb, self.pop, self.names
+    # def getTimePlotParameters(self, colors=None):
+    #     return self.timeCarb, self.pop, self.names
     
     def drawCore(self, depthext = None, thext = None, propext = [0.,1.], lwidth = 3,
                  colsed=None, coltime=None, size=(8,10), font=10, dpi=80, figname=None,

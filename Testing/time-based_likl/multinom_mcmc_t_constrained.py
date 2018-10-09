@@ -5,7 +5,18 @@
 #Last edit       :19/07/2018
 #Version         :1.1
 #Usage           :python multinom_mcmc_t_constrained.py
-#Notes           :Compared to mcmc_multinomial.py, the amount of free parameters can be limited from 1-11 in this script.
+#Notes           :Compared to mcmc_multinomial_t.py, the amount of free parameters can be limited from 1-11 in this script.
+# 
+#                 This script uses the depth-structure of a core simulation (i.e. coralgal assemblage at each 0.2 cm depth interval of a simulated core)
+#                 from pyReef-Core as the observed data. The observed data is used by the MCMC algorithm to find the posterior probability distribution of free parameters 
+#                 and model predictions. The amount of free parameters in this script is 27. 
+#                 This includes 3 population dynamics parameters and 24 environmental threshold parameters.
+# 
+#                 Population dynamics parameters: ax, ay, m
+#                 Environmental threshold parameters: flow1[,:n], flow2[,:n], flow3[,:n], flow4[,:n],
+#                                                     sed1[,:n], sed2[,:n], sed3[,:n], sed4[,:n] 
+#                                                     For number of assemblages (n).
+# 
 #                 The MCMC method in this script is adapted from:
 #                 [Chandra_ICONIP2017] R. Chandra, L. Azizi, S. Cripps, 'Bayesian neural learning via Langevin dynamicsfor chaotic time series prediction', ICONIP 2017.
 #Python_version  :2.7.12
@@ -627,7 +638,7 @@ def main():
     synth_data = 'data/synthdata_t_prop_08_1.txt'
     synth_vec = 'data/synthdata_t_vec_08_1.txt'
 
-    gt_depths, gt_vec_d = np.genfromtxt('data/synthdata_d_vec_08.txt', usecols=(0,1), unpack=True)
+    gt_depths, gt_vec_d = np.genfromtxt('data/synthdata_d_vec_08_1.txt', usecols=(0,1), unpack=True)
     gt_prop_t = np.loadtxt(synth_data, usecols=(1,2,3,4,5)) 
     gt_timelay, gt_vec_t = np.genfromtxt(synth_vec, usecols=(0, 1), unpack = True)
     gt_timelay = gt_timelay[::-1]

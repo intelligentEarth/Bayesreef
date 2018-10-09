@@ -1,8 +1,28 @@
-# !/usr/bin/python
-# BayesReef: a MCMC random walk method applied to pyReef-Core
-# Authors: Jodie Pall and Danial Azam (2017)
-# Adapted from: [Chandra_ICONIP2017] R. Chandra, L. Azizi, S. Cripps, 'Bayesian neural learning via Langevin dynamicsfor chaotic time series prediction', ICONIP 2017.
-# (to be addeded on https://www.researchgate.net/profile/Rohitash_Chandra)
+#!/usr/bin/env python
+#Title           :multinom_mcmc_d_constrained.py
+#Description     :This is the script for BayesReef: an MCMC random walk method applied to pyReefCore.
+#Author          :Jodie Pall and Danial Azam 
+#Last edit       :19/07/2018
+#Version         :1.0
+#Usage           :python multinom_mcmc_d_constrained.py
+#Notes           :Compared to mcmc_multinomial_d.py, the amount of free parameters can be limited from 1-11 in this script.
+# 
+#                 This script uses the depth-structure of a core simulation (i.e. coralgal assemblage at each 0.2 cm depth interval of a simulated core)
+#                 from pyReef-Core as the observed data. The observed data is used by the MCMC algorithm to find the posterior probability distribution of free parameters 
+#                 and model predictions. The amount of free parameters in this script is 27. 
+#                 This includes 3 population dynamics parameters and 24 environmental threshold parameters.
+# 
+#                 Population dynamics parameters: ax, ay, m
+#                 Environmental threshold parameters: flow1[,:n], flow2[,:n], flow3[,:n], flow4[,:n],
+#                                                     sed1[,:n], sed2[,:n], sed3[,:n], sed4[,:n] 
+#                                                     For number of assemblages (n).
+# 
+#References:      The MCMC method in this script is adapted from:
+#                 [Chandra_ICONIP2017] R. Chandra, L. Azizi, S. Cripps, 'Bayesian neural learning via Langevin dynamicsfor chaotic time series prediction', ICONIP 2017.
+#Python_version  :2.7.12
+#==============================================================================
+
+# Import the modules needed to run the script.
 
 import os
 import math
