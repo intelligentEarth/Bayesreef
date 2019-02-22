@@ -348,7 +348,7 @@ class modelPlot():
         colsed[len(self.sedH)-1]=np.array([244./256.,164/256.,96/256.,1.])
 
         # Define figure size
-        fig = plt.figure(figsize=size, dpi=dpi, constrained_layout=True)
+        fig = plt.figure(figsize=size, dpi=dpi)#, constrained_layout=True)
         gs = gridspec.GridSpec(1,11)
         ax1 = fig.add_subplot(gs[:3])
         ax2 = fig.add_subplot(gs[3:6], sharey=ax1)

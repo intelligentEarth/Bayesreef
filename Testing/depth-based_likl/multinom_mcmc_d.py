@@ -606,7 +606,7 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 10 #input('Enter number of samples: ')
+    samples= 50 #input('Enter number of samples: ')
     # description = raw_input('Enter description: ')
     description = 'depth-based likelihood, self.likelihoodWithDominance'
     assemblage = 2
