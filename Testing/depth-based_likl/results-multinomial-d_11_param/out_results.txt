@@ -1,0 +1,6 @@
+DIFFERENCE
+	Mean: 2.80629874908, st. dev: 1.05207721917, mode: [2.64900662]
+LIKELIHOOD
+	Mean: -31.7414979989, st. dev: 2.23239648822, mode: [-28.97418857]
+Accept ratio: 8.13 %
+Samples accepted : 4065 out of 50000
