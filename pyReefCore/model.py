@@ -91,6 +91,11 @@ class Model(object):
             cmmat= self.input.__dict__["communityMatrix"]
             mtpar= self.input.__dict__["malthusParam"]
 
+        else:
+            self.input.__dict__["communityMatrix"] = self.opt_cMatrix
+            self.input.__dict__["malthusParam"] = self.opt_malthusParam
+
+           
         # Seed the random number generator consistently on all nodes
         seed = None
         if self._rank == 0:
@@ -305,6 +310,19 @@ class Model(object):
             self.opt_cMatrix = diagmat
             tempParam= float(input_vector[(new_shape*2)+2])
             self.opt_malthusParam = np.full(communities, tempParam)
+        
+        else:
+            x = input_vector[0]
+            y = input_vector[1]
+            diagmat = np.zeros((communities, communities))
+            np.fill_diagonal(diagmat, x)
+            for i in range(0, communities - 1):
+                diagmat[i][i + 1] = y
+                diagmat[i + 1][i] = y
+            self.opt_cMatrix = diagmat
+            tempParam= float(input_vector[2])
+            self.opt_malthusParam = np.full(communities, tempParam)
+
         optf = self.opt_Flow
         opts = self.opt_Sed
         optCM = self.opt_cMatrix
