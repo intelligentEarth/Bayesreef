@@ -297,6 +297,7 @@ class MCMC():
             v_proposal = np.append(v_proposal,(cm_ax,cm_ay,m))
             self.prop_step = np.repeat(np.array([self.step_sed]), 4*self.communities, axis = 0)
             self.prop_step = np.append(self.prop_step,(np.repeat(np.array([self.step_flow]), 4*self.communities, axis = 0)))
+            self.prop_step = np.append(self.prop_step,([self.step_a, self.step_a, self.step_m]))
         else:
             v_proposal = np.array([cm_ax,cm_ay,m])
             self.prop_step = np.array([self.step_a, self.step_a, self.step_m])
@@ -354,40 +355,107 @@ class MCMC():
         axprop_t.set_ylim(axprop_t.get_ylim())#[::-1])
 
 
+
+        p_sed1=[0.0007, 0.0013, 0.0025]
+        p_sed2=[0.0016, 0.0018, 0.0027]
+        p_sed3=[0.0018, 0.0027, 0.0029]
+        p_sed4=[0.0019, 0.0030, 0.0043]
+        p_flow1=[0.060, 0.008 ,0.]
+        p_flow2=[0.089, 0.056, 0.]
+        p_flow3=[0.249, 0.182, 0.056]
+        p_flow4=[0.288, 0.189, 0.069]
+
+
+        # p_sed1=[0.0009, 0.0015, 0.0023]
+        # p_sed2=[0.0015, 0.0017, 0.0024]
+        # p_sed3=[0.0016, 0.0028, 0.0027]
+        # p_sed4=[0.0017, 0.0031, 0.0043]
+        # p_flow1=[0.055, 0.008 ,0.]
+        # p_flow2=[0.082, 0.051, 0.]
+        # p_flow3=[0.259, 0.172, 0.058]
+        # p_flow4=[0.288, 0.185, 0.066]
+
         for i in range(samples - 1):
             print '\nSample: ', i
             start = time.time()
-            p_sed1=[0.0009, 0.0015, 0.0023]
-            p_sed2=[0.0015, 0.0017, 0.0024]
-            p_sed3=[0.0016, 0.0028, 0.0027]
-            p_sed4=[0.0017, 0.0031, 0.0043]
-            p_flow1=[0.055, 0.008 ,0.]
-            p_flow2=[0.082, 0.051, 0.]
-            p_flow3=[0.259, 0.172, 0.058]
-            p_flow4=[0.288, 0.185, 0.066]
+
 
             if self.cov_init:
                 # print 'self. cholesky', self.cholesky
                 # print ' v _ prop', v_proposal   
                 v_p = np.random.normal(size = v_proposal.shape)
                 v_proposal_cov = v_proposal + np.dot(self.cholesky,v_p)
-                p_ax  = v_proposal_cov[0]
-                p_ay = v_proposal_cov[1]
-                p_m = v_proposal_cov[2]
+                p_sed1[0:self.communities] = v_proposal_cov[0:3]
+                p_sed2[0:self.communities] = v_proposal_cov[3:6]
+                p_sed3[0:self.communities] = v_proposal_cov[6:9]
+                p_sed4[0:self.communities] = v_proposal_cov[9:12]
+                p_flow1[0:self.communities] = v_proposal_cov[12:15]
+                p_flow2[0:self.communities] = v_proposal_cov[15:18]
+                p_flow3[0:self.communities] = v_proposal_cov[18:21]
+                p_flow4[0:self.communities] = v_proposal_cov[21:24]
+                p_ax  = v_proposal_cov[24]
+                p_ay = v_proposal_cov[25]
+                p_m = v_proposal_cov[26]
+
 
             else:
                 p_ax = cm_ax + np.random.normal(0, self.step_a)
                 p_ay = cm_ay + np.random.normal(0, self.step_a)
                 p_m = m + np.random.normal(0, self.step_m)
 
+                for i in range(self.communities):
+                    p_flow1[i] = flow1[i] + np.random.normal(0, self.step_flow)
+                    p_flow2[i] = flow2[i] + np.random.normal(0, self.step_flow)
+                    p_flow3[i] = flow3[i] + np.random.normal(0, self.step_flow)
+                    p_flow4[i] = flow4[i] + np.random.normal(0, self.step_flow)                
+                    p_sed1[i] = sed1[i] + np.random.normal(0, self.step_sed)
+                    p_sed2[i] = sed2[i] + np.random.normal(0, self.step_sed)
+                    p_sed3[i] = sed3[i] + np.random.normal(0, self.step_sed)
+                    p_sed4[i] = sed4[i] + np.random.normal(0, self.step_sed)                
+
 
             p_ax = self.proposalJump(cm_ax, self.min_a, self.max_a, p_ax)
             p_ay = self.proposalJump(cm_ay, self.min_a, self.max_a, p_ay)
             p_m = self.proposalJump(m, self.min_m, self.max_m, p_m)
+            
+            for i in range(self.communities):
+                p_flow1[i] = self.proposalJump(flow1[i],flowlim[0],flowlim[1], p_flow1[i]) 
+                p_flow2[i] = self.proposalJump(flow2[i],flow1[i], flowlim[1], p_flow2[i])
+                p_flow3[i] = self.proposalJump(flow3[i],flow2[i], flowlim[1], p_flow3[i]) 
+                p_flow4[i] = self.proposalJump(flow4[i],flow3[i], flowlim[1], p_flow4[i])
+                p_sed1[i] = self.proposalJump(sed1[i],sedlim[0],sedlim[1], p_sed1[i]) 
+                p_sed2[i] = self.proposalJump(sed2[i],sed1[i], sedlim[1], p_sed2[i])
+                p_sed3[i] = self.proposalJump(sed3[i],sed2[i], sedlim[1], p_sed3[i]) 
+                p_sed4[i] = self.proposalJump(sed4[i],sed3[i], sedlim[1], p_sed4[i])
+            
+            
+            tmat_s = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4)).reshape(4,communities)
+            tmatrix = tmat_s.T
+            tmp = np.zeros((communities,4))
+            for x in range(tmatrix.shape[0]):
+                a = np.sort(tmatrix[x,:])
+                tmp[x,:] = a
+            tmat = tmp.T
+            p_sed1 = tmat[0,:]
+            p_sed2 = tmat[1,:]
+            p_sed3 = tmat[2,:]
+            p_sed4 = tmat[3,:]
 
-            v_proposal = np.array([p_ax,p_ay,p_m])
+            tmat_f = np.concatenate((p_flow1,p_flow2,p_flow3,p_flow4)).reshape(4,communities)
+            tmatrix = tmat_f.T
+            tmp = np.zeros((communities,4))
+            for x in range(tmatrix.shape[0]):
+                a = np.sort(tmatrix[x,:])
+                tmp[x,:] = a
+            tmat = tmp.T
+            p_flow1 = tmat[0,:]
+            p_flow2 = tmat[1,:]
+            p_flow3 = tmat[2,:]
+            p_flow4 = tmat[3,:]
 
-                    
+            v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
+            v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
+
             print 'V_proposalllll ,', v_proposal
 
             [likelihood_proposal, diff, sim_pred_d,sim_vec_d, sim_vec_t] = self.likelihoodWithProps(reef, self.gt_prop_d, v_proposal)
@@ -532,8 +600,8 @@ class MCMC():
         plt.close()
 
         return (pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
-        	pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
-        	accept_ratio, accepted_count,x_tick_labels, x_tick_values)
+            pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
+            accept_ratio, accepted_count,x_tick_labels, x_tick_values)
 
 #####################################################################
 
@@ -541,10 +609,10 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 100
+    samples= 200
     # description = raw_input('Enter description: ')
     description = 'depth-based likelihood, self.likelihoodWithProps'
-    assemblage = 2
+    assemblage = 3
     xmlinput = 'input_synth.xml'
     synth_prop = 'data/synth_core_prop_d_08.txt'
     synth_vec = 'data/synth_core_vec_d_08.txt'
@@ -558,7 +626,7 @@ def main():
     """ Option to visualise the initial parameters [0] and visualise the cores [1] for each iteration of MCMC. 
     Mainly useful for runModel.py and slows down simulation in MCMC sampler. """
     vis = [False, False]
-    sedsim, flowsim = False, False
+    sedsim, flowsim = True, True
     sedlim = [0., 0.005]
     flowlim = [0.,0.3]
     run_nb = 0

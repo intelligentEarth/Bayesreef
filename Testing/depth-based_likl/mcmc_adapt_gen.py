@@ -91,7 +91,7 @@ class MCMC():
         self.counter = 0
         self.cholesky = [] 
         self.cov_init = False
-        self.use_cov = False
+        self.use_cov = True # decide if rw or adaptive mcmc proposals. False indicates   RW proposals 
         
     def runModel(self, reef, input_vector):
         reef.convertVector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
@@ -209,7 +209,7 @@ class MCMC():
         cov_mat = np.cov(pos_v[:i,].T)
         np.savetxt('cov_mat.txt', cov_mat )
         cov_noise = self.prop_step*np.identity(cov_mat.shape[0], dtype = float)
-        print 'cov_noise', cov_noise
+        # print 'cov_noise', cov_noise
         covariance = np.add(cov_mat, cov_noise)        
         L = np.linalg.cholesky(covariance)
         self.cholesky = L
@@ -280,14 +280,14 @@ class MCMC():
         m = np.random.uniform(self.min_m, self.max_m)
         pos_m[0] = m
 
-        pr_flow2 = flowlim[1]-flow1[self.assemblage-1]
-        pr_flow3 = flowlim[1]-flow2[self.assemblage-1]
-        pr_flow4 = flowlim[1]-flow3[self.assemblage-1]
+        pr_flow2 = flowlim[1]-flow1[0]
+        pr_flow3 = flowlim[1]-flow2[0]
+        pr_flow4 = flowlim[1]-flow3[0]
         prs_flow = np.array([pr_flow2,pr_flow3,pr_flow4])
         c_pr_flow = np.prod(prs_flow)
-        pr_sed2 = sedlim[1]-sed1[self.assemblage-1]
-        pr_sed3 = sedlim[1]-sed2[self.assemblage-1]
-        pr_sed4 = sedlim[1]-sed3[self.assemblage-1]
+        pr_sed2 = sedlim[1]-sed1[0]
+        pr_sed3 = sedlim[1]-sed2[0]
+        pr_sed4 = sedlim[1]-sed3[0]
         prs_sed = np.array([pr_sed2,pr_sed3,pr_sed4])
         c_pr_sed = np.prod(prs_sed)
         c_cs_prod = c_pr_flow*c_pr_sed
@@ -297,6 +297,7 @@ class MCMC():
             v_proposal = np.append(v_proposal,(cm_ax,cm_ay,m))
             self.prop_step = np.repeat(np.array([self.step_sed]), 4*self.communities, axis = 0)
             self.prop_step = np.append(self.prop_step,(np.repeat(np.array([self.step_flow]), 4*self.communities, axis = 0)))
+            self.prop_step = np.append(self.prop_step,([self.step_a, self.step_a, self.step_m]))
         else:
             v_proposal = np.array([cm_ax,cm_ay,m])
             self.prop_step = np.array([self.step_a, self.step_a, self.step_m])
@@ -354,40 +355,124 @@ class MCMC():
         axprop_t.set_ylim(axprop_t.get_ylim())#[::-1])
 
 
+        p_sed1=[0.0007, 0.0013, 0.0025] # initial starting position
+        p_sed2=[0.0016, 0.0018, 0.0027]
+        p_sed3=[0.0018, 0.0027, 0.0029]
+        p_sed4=[0.0019, 0.0030, 0.0043]
+        p_flow1=[0.060, 0.008 ,0.]
+        p_flow2=[0.089, 0.056, 0.]
+        p_flow3=[0.249, 0.182, 0.056]
+        p_flow4=[0.288, 0.189, 0.069]
+
+        # p_sed1=[0.0009, 0.0015, 0.0023] # true
+        # p_sed2=[0.0015, 0.0017, 0.0024]
+        # p_sed3=[0.0016, 0.0028, 0.0027]
+        # p_sed4=[0.0017, 0.0031, 0.0043]
+        # p_flow1=[0.055, 0.008 ,0.]
+        # p_flow2=[0.082, 0.051, 0.]
+        # p_flow3=[0.259, 0.172, 0.058]
+        # p_flow4=[0.288, 0.185, 0.066]
+        
+        p_sed1_true=[0.0009, 0.0015, 0.0023]
+        p_sed2_true=[0.0015, 0.0017, 0.0024]
+        p_sed3_true=[0.0016, 0.0028, 0.0027]
+        p_sed4_true=[0.0017, 0.0031, 0.0043]
+        p_flow1_true=[0.055, 0.008 ,0.]
+        p_flow2_true=[0.082, 0.051, 0.]
+        p_flow3_true=[0.259, 0.172, 0.058]
+        p_flow4_true=[0.288, 0.185, 0.066]
+
         for i in range(samples - 1):
             print '\nSample: ', i
             start = time.time()
-            # p_sed1=[0.0009, 0.0015, 0.0023]
-            # p_sed2=[0.0015, 0.0017, 0.0024]
-            # p_sed3=[0.0016, 0.0028, 0.0027]
-            # p_sed4=[0.0017, 0.0031, 0.0043]
-            # p_flow1=[0.055, 0.008 ,0.]
-            # p_flow2=[0.082, 0.051, 0.]
-            # p_flow3=[0.259, 0.172, 0.058]
-            # p_flow4=[0.288, 0.185, 0.066]
 
-            if self.cov_init:
+
+            if self.cov_init and self.use_cov : #Adaptive MCMC proposals
                 # print 'self. cholesky', self.cholesky
                 # print ' v _ prop', v_proposal   
                 v_p = np.random.normal(size = v_proposal.shape)
-                v_proposal = v_proposal + np.dot(self.cholesky,v_p)
+                v_proposal_cov = v_proposal + np.dot(self.cholesky,v_p)
+                p_sed1[0:self.communities] = v_proposal_cov[0:3]
+                p_sed2[0:self.communities] = v_proposal_cov[3:6]
+                p_sed3[0:self.communities] = v_proposal_cov[6:9]
+                p_sed4[0:self.communities] = v_proposal_cov[9:12]
+                p_flow1[0:self.communities] = v_proposal_cov[12:15]
+                p_flow2[0:self.communities] = v_proposal_cov[15:18]
+                p_flow3[0:self.communities] = v_proposal_cov[18:21]
+                p_flow4[0:self.communities] = v_proposal_cov[21:24]
+                p_ax  = v_proposal_cov[24]
+                p_ay = v_proposal_cov[25]
+                p_m = v_proposal_cov[26]
 
-            else:
+                print '\n using cov \n'
+            else:  # classic random walk
                 p_ax = cm_ax + np.random.normal(0, self.step_a)
-                p_ax = self.proposalJump(cm_ax, self.min_a, self.max_a, p_ax)
-
                 p_ay = cm_ay + np.random.normal(0, self.step_a)
-                p_ay = self.proposalJump(cm_ay, self.min_a, self.max_a, p_ay)
-                
                 p_m = m + np.random.normal(0, self.step_m)
-                p_m = self.proposalJump(m, self.min_m, self.max_m, p_m)
 
-                if (self.sedsim == True) and (self.flowsim == True):    
-                    v_proposal = np.concatenate((sed1,sed2,sed3,sed4,flow1,flow2,flow3,flow4))
-                    v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
-                else:
-                    v_proposal = np.array([cm_ax,cm_ay,m])
-                    
+                for comm in range(self.communities):
+                    p_flow1[comm] = flow1[comm] + np.random.normal(0, self.step_flow)
+                    p_flow2[comm] = flow2[comm] + np.random.normal(0, self.step_flow)
+                    p_flow3[comm] = flow3[comm] + np.random.normal(0, self.step_flow)
+                    p_flow4[comm] = flow4[comm] + np.random.normal(0, self.step_flow)                
+                    p_sed1[comm] = sed1[comm] + np.random.normal(0, self.step_sed)
+                    p_sed2[comm] = sed2[comm] + np.random.normal(0, self.step_sed)
+                    p_sed3[comm] = sed3[comm] + np.random.normal(0, self.step_sed)
+                    p_sed4[comm] = sed4[comm] + np.random.normal(0, self.step_sed) 
+
+                print '\n using rw \n '
+            frozen_assemparams = 1 # 0 means a,a,m and 1 means that assemble 2 and 3 are frozen to true (makes 11 params) , 2 would mean that only assemble 3 is frozen (makes 19 free params) and 3 would mean that all are free   (makes 27 free params)            
+
+
+            p_sed1[frozen_assemparams:] = p_sed1_true[frozen_assemparams:] # for experimental purpsoe, if you wish to free only 1 assemblege and keep rest frozen to true
+            p_sed2[frozen_assemparams:] = p_sed2_true[frozen_assemparams:]
+            p_sed3[frozen_assemparams:] = p_sed3_true[frozen_assemparams:]
+            p_sed4[frozen_assemparams:] = p_sed4_true[frozen_assemparams:]
+            
+            p_flow1[frozen_assemparams:] = p_flow1_true[frozen_assemparams:]
+            p_flow2[frozen_assemparams:] = p_flow2_true[frozen_assemparams:]
+            p_flow3[frozen_assemparams:] = p_flow3_true[frozen_assemparams:]
+            p_flow4[frozen_assemparams:] = p_flow4_true[frozen_assemparams:]
+
+            
+            for comm in range(self.communities):
+                p_flow1[comm] = self.proposalJump(flow1[comm],flowlim[0],flowlim[1], p_flow1[comm]) 
+                p_flow2[comm] = self.proposalJump(flow2[comm],flow1[comm], flowlim[1], p_flow2[comm])
+                p_flow3[comm] = self.proposalJump(flow3[comm],flow2[comm], flowlim[1], p_flow3[comm]) 
+                p_flow4[comm] = self.proposalJump(flow4[comm],flow3[comm], flowlim[1], p_flow4[comm])
+                p_sed1[comm] = self.proposalJump(sed1[comm],sedlim[0],sedlim[1], p_sed1[comm]) 
+                p_sed2[comm] = self.proposalJump(sed2[comm],sed1[comm], sedlim[1], p_sed2[comm])
+                p_sed3[comm] = self.proposalJump(sed3[comm],sed2[comm], sedlim[1], p_sed3[comm]) 
+                p_sed4[comm] = self.proposalJump(sed4[comm],sed3[comm], sedlim[1], p_sed4[comm])
+            
+            
+            tmat_s = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4)).reshape(4,communities)
+            tmatrix = tmat_s.T
+            tmp = np.zeros((communities,4))
+            for x in range(tmatrix.shape[0]):
+                a = np.sort(tmatrix[x,:])
+                tmp[x,:] = a
+            tmat = tmp.T
+            p_sed1 = tmat[0,:]
+            p_sed2 = tmat[1,:]
+            p_sed3 = tmat[2,:]
+            p_sed4 = tmat[3,:]
+
+            tmat_f = np.concatenate((p_flow1,p_flow2,p_flow3,p_flow4)).reshape(4,communities)
+            tmatrix = tmat_f.T
+            tmp = np.zeros((communities,4))
+            for x in range(tmatrix.shape[0]):
+                a = np.sort(tmatrix[x,:])
+                tmp[x,:] = a
+            tmat = tmp.T
+            p_flow1 = tmat[0,:]
+            p_flow2 = tmat[1,:]
+            p_flow3 = tmat[2,:]
+            p_flow4 = tmat[3,:]
+
+            v_proposal = np.concatenate((p_sed1,p_sed2,p_sed3,p_sed4,p_flow1,p_flow2,p_flow3,p_flow4))
+            v_proposal = np.append(v_proposal,(p_ax,p_ay,p_m))
+
             print 'V_proposalllll ,', v_proposal
 
             [likelihood_proposal, diff, sim_pred_d,sim_vec_d, sim_vec_t] = self.likelihoodWithProps(reef, self.gt_prop_d, v_proposal)
@@ -432,7 +517,7 @@ class MCMC():
             
             if u < mh_prob: # accept
                 #   Update position
-                print i, ' is accepted sample'
+                print i, ' is accepted sample','   - number of accepted : ', naccept
                 naccept += 1
                 count_list.append(i)
                 likelihood = likelihood_proposal
@@ -490,6 +575,7 @@ class MCMC():
                 pos_diff[i + 1,] = pos_diff[i,]
                 pos_likl[i + 1,] = pos_likl[i,]
                 print 'REJECTED\nLikelihood:',likelihood,'and difference score:', pos_diff[i,]
+                print ' - number of accepted solutions  : ', naccept
                 #   Copy past accepted state
                 if self.sedsim == True:
                     pos_sed1[i + 1,] = pos_sed1[i,]
@@ -518,7 +604,7 @@ class MCMC():
 
             if i==samples - 2:
                 self.saveCore(reef, i+1)
-            if i in range(10,samples, 10) :
+            if i in range(1000, samples, 10) :
                 print 'cov computed = i ',i, '\n'
                 self.computeCovariance(i,pos_v)
 
@@ -532,8 +618,8 @@ class MCMC():
         plt.close()
 
         return (pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
-        	pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
-        	accept_ratio, accepted_count,x_tick_labels, x_tick_values)
+            pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
+            accept_ratio, accepted_count,x_tick_labels, x_tick_values)
 
 #####################################################################
 
@@ -541,10 +627,10 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 1000
+    samples= 100
     # description = raw_input('Enter description: ')
     description = 'depth-based likelihood, self.likelihoodWithProps'
-    assemblage = 2
+    assemblage = 3
     xmlinput = 'input_synth.xml'
     synth_prop = 'data/synth_core_prop_d_08.txt'
     synth_vec = 'data/synth_core_vec_d_08.txt'
