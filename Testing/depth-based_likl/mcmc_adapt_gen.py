@@ -40,6 +40,33 @@ from cycler import cycler
 from scipy import stats 
 from scipy.stats import norm
 from matplotlib.cm import terrain, plasma, Set2
+import argparse
+
+
+#Initialise and parse inputs
+parser=argparse.ArgumentParser(description='PTBayeslands modelling')
+
+parser.add_argument('-s','--samples', help='Number of samples', default=10000, dest="samples",type=int)
+parser.add_argument('-cs','--cov_start', help='Covariance calculation start', default=50, dest="cov_start",type=int)
+parser.add_argument('-ci','--cov_interval', help='Covariance Interval', default=10, dest="cov_interval",type=int)
+parser.add_argument('-uc','--use_cov', help='Flag for adaptive', default=1, dest="use_cov",type=int)
+parser.add_argument('-f','--frozen', help='0 for 3 and 1 for 11 params', default=0, dest="frozen",type=int)
+
+
+args = parser.parse_args()
+
+if args.use_cov == 1:
+    args.use_cov = True
+else:
+    args.use_cov = False
+
+samples = args.samples #10000  # total number of samples by all the chains (replicas) in parallel tempering
+cov_start = args.cov_start
+cov_interval = args.cov_interval
+use_cov = args.use_cov
+frozen_assemparams = args.frozen
+
+print '\n use_cov', use_cov , '\n'
 
 cmap=plt.cm.Set2
 c = cycler('color', cmap(np.linspace(0,1,8)) )
@@ -48,7 +75,7 @@ plt.rcParams["axes.prop_cycle"] = c
 class MCMC():
     def __init__(self, filename, xmlinput, simtime, samples, communities, sedsim, sedlim, flowsim, flowlim, vis,
         gt_depths, gt_vec_d, gt_prop_d,gt_timelay, gt_vec_t,
-        min_m, max_m, true_m, step_m, min_a, max_a, true_ax, true_ay,step_a, step_sed, step_flow, assemblage):
+        min_m, max_m, true_m, step_m, min_a, max_a, true_ax, true_ay,step_a, step_sed, step_flow, assemblage, use_cov):
         self.font = 10
         self.width = 1
         self.colors = terrain(np.linspace(0, 1.8, 14)) #len(reef.core.coralH)+10))
@@ -91,7 +118,7 @@ class MCMC():
         self.counter = 0
         self.cholesky = [] 
         self.cov_init = False
-        self.use_cov = True # decide if rw or adaptive mcmc proposals. False indicates   RW proposals 
+        self.use_cov = use_cov # decide if rw or adaptive mcmc proposals. False indicates   RW proposals 
         
     def runModel(self, reef, input_vector):
         reef.convertVector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
@@ -604,7 +631,7 @@ class MCMC():
 
             if i==samples - 2:
                 self.saveCore(reef, i+1)
-            if i in range(1000, samples, 10) :
+            if i in range(cov_start, samples, cov_interval) :
                 print 'cov computed = i ',i, '\n'
                 self.computeCovariance(i,pos_v)
 
@@ -638,7 +665,7 @@ def main():
     gt_timelay, gt_vec_t = np.genfromtxt('data/synthdata_t_vec_08_1.txt', usecols=(0, 1), unpack = True)
     gt_prop_d = np.loadtxt(synth_prop, usecols=(1,2,3,4))
     gt_timelay = gt_timelay[::-1]
-
+    # use_cov = False
     nCommunities = 3
     simtime = 8500
     """ Option to visualise the initial parameters [0] and visualise the cores [1] for each iteration of MCMC. 
@@ -683,7 +710,7 @@ def main():
 
     mcmc = MCMC(filename, xmlinput, simtime, samples, nCommunities, sedsim, sedlim, flowsim, flowlim, vis,
         gt_depths, gt_vec_d, gt_prop_d, gt_timelay, gt_vec_t,
-        min_m, max_m, true_m, step_m, min_a, max_a, true_ax, true_ay ,step_a, step_sed, step_flow, assemblage)
+        min_m, max_m, true_m, step_m, min_a, max_a, true_ax, true_ay ,step_a, step_sed, step_flow, assemblage, use_cov)
 
     [pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
     pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m,
