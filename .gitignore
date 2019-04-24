@@ -20,7 +20,7 @@ __MACOSX
 .DS_Store
 *.dSYM
 
-Testing/depth-based_likl/results_*/
+Testing/depth-based_likl/results-*/
 Testing/depth-based_likl/model*/
 Testing/depth-based_likl/run*/
 Testing/depth-based_likl/saved_results/
