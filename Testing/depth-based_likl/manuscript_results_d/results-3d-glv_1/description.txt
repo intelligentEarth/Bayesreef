@@ -1,3 +1,0 @@
-Filename : 3DLikSrf_glv.py
-Test Description: 3D likelihood surface, Malthusian parameter & Sub-/Super-diagonalself.likelihoodWithProps
-Samples: 100

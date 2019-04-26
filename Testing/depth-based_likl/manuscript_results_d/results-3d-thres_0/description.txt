@@ -1,3 +1,0 @@
-Filename : 3DLikSrf_thres.py
-Test Description: 3D likelihood surface, Flow 2 & Flow 3self.likelihoodWithProps
-Samples: 100
