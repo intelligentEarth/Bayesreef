@@ -21,6 +21,7 @@ __MACOSX
 *.dSYM
 
 Testing/depth-based_likl/results_*/
+Testing/depth-based_likl/results-*/
 Testing/depth-based_likl/model*/
 Testing/depth-based_likl/run*/
 Testing/depth-based_likl/saved_results/
@@ -31,3 +32,5 @@ Testing/time-based_likl/results_*/
 Testing/time-based_likl/model*
 Testing/time-based_likl/1dsurf*
 Testing/time-based_likl/misc
+
+src/
