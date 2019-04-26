@@ -139,7 +139,7 @@ def plotPosCore(filedir, pos_samples_1, pos_samples_2, gt_1, gt_2, y_1, y_2, x_l
     ax2.set_xticklabels(x_labels, rotation=70)
     lgd = fig.legend(frameon=False,bbox_to_anchor = (0.95,0.19), borderpad=2., prop={'size':font-3})
     plt.tight_layout(pad=2.5)
-    fig.savefig('%s/mcmcres.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
+    fig.savefig('%s/mcmcres_t_d.png' % (filedir), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
     plt.close('all')
 
 

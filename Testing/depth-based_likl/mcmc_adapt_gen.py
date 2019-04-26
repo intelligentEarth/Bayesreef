@@ -234,9 +234,8 @@ class MCMC():
     
     def computeCovariance(self, i, pos_v):
         cov_mat = np.cov(pos_v[:i,].T)
-        np.savetxt('cov_mat.txt', cov_mat )
+        # np.savetxt('cov_mat_%s.txt' %(), cov_mat )
         cov_noise = self.prop_step*np.identity(cov_mat.shape[0], dtype = float)
-        # print 'cov_noise', cov_noise
         covariance = np.add(cov_mat, cov_noise)        
         L = np.linalg.cholesky(covariance)
         self.cholesky = L
@@ -278,30 +277,24 @@ class MCMC():
         pr_flow = np.zeros((samples , communities))
         pr_sed = np.zeros((samples , communities))
 
-        sed1 = [0.0009, 0.0015, 0.0023]
-        pos_sed1[0,:] = sed1
-        sed2 = [0.0015, 0.0017, 0.0024]
-        pos_sed2[0,:] = sed2
-        sed3 = [0.0016, 0.0028, 0.0027]
-        pos_sed3[0,:] = sed3
-        sed4 = [0.0017, 0.0031, 0.0043]
-        pos_sed4[0,:] = sed4
-        flow1 = [0.055, 0.008 ,0.]
-        pos_flow1[0,:] = flow1
-        flow2 = [0.082, 0.051, 0.]
-        pos_flow2[0,:] = flow2
-        flow3 = [0.259, 0.172, 0.058]
-        pos_flow3[0,:] = flow3
-        flow4 = [0.288, 0.185, 0.066]   
-        pos_flow4[0,:] = flow4
-        
-        cm_ax = self.true_ax
-        pos_ax[0] = cm_ax
-        cm_ay = self.true_ay
-        pos_ay[0] = cm_ay
-        m = self.true_m
-        pos_m[0] = m
+        sed1 = [0.0002, 0.0010, 0.0015]
+        sed2 = [0.0012, 0.0019, 0.0028]
+        sed3 = [0.0020, 0.0023, 0.0039]
+        sed4 = [0.0022, 0.0048, 0.0055]
+        flow1=[0.063, 0.003 ,0.]
+        flow2=[0.097, 0.086, 0.]
+        flow3=[0.229, 0.182, 0.036]
+        flow4=[0.398, 0.199, 0.079]
 
+        # cm_ax = self.true_ax
+        # pos_ax[0] = cm_ax
+        # cm_ay = self.true_ay
+        # pos_ay[0] = cm_ay
+        # m = self.true_m
+        # pos_m[0] = m
+
+        cm_ax = np.random.uniform(self.min_a,self.max_a)
+        pos_ax[0] = cm_ax
         cm_ay = np.random.uniform(self.min_a,self.max_a)
         pos_ay[0] = cm_ay
         m = np.random.uniform(self.min_m, self.max_m)
@@ -382,15 +375,14 @@ class MCMC():
         axprop_t.set_ylim(axprop_t.get_ylim())#[::-1])
 
 
-        p_sed1=[0.0007, 0.0013, 0.0025] # initial starting position
-        p_sed2=[0.0016, 0.0018, 0.0027]
-        p_sed3=[0.0018, 0.0027, 0.0029]
-        p_sed4=[0.0019, 0.0030, 0.0043]
-        p_flow1=[0.060, 0.008 ,0.]
-        p_flow2=[0.089, 0.056, 0.]
-        p_flow3=[0.249, 0.182, 0.056]
-        p_flow4=[0.288, 0.189, 0.069]
-
+        p_sed1 = sed1 # initial starting position
+        p_sed2 = sed2
+        p_sed3 = sed3 # initial starting position
+        p_sed4 = sed4
+        p_flow1 = flow1
+        p_flow2 = flow2
+        p_flow3 = flow3
+        p_flow4 = flow4
         # p_sed1=[0.0009, 0.0015, 0.0023] # true
         # p_sed2=[0.0015, 0.0017, 0.0024]
         # p_sed3=[0.0016, 0.0028, 0.0027]
@@ -448,7 +440,7 @@ class MCMC():
                     p_sed4[comm] = sed4[comm] + np.random.normal(0, self.step_sed) 
 
                 print '\n using rw \n '
-            frozen_assemparams = 1 # 0 means a,a,m and 1 means that assemble 2 and 3 are frozen to true (makes 11 params) , 2 would mean that only assemble 3 is frozen (makes 19 free params) and 3 would mean that all are free   (makes 27 free params)            
+            # frozen_assemparams # 0 means a,a,m and 1 means that assemble 2 and 3 are frozen to true (makes 11 params) , 2 would mean that only assemble 3 is frozen (makes 19 free params) and 3 would mean that all are free   (makes 27 free params)            
 
 
             p_sed1[frozen_assemparams:] = p_sed1_true[frozen_assemparams:] # for experimental purpsoe, if you wish to free only 1 assemblege and keep rest frozen to true
@@ -462,6 +454,10 @@ class MCMC():
             p_flow4[frozen_assemparams:] = p_flow4_true[frozen_assemparams:]
 
             
+            p_ax = self.proposalJump(cm_ax, self.min_a, self.max_a, p_ax)
+            p_ay = self.proposalJump(cm_ay, self.min_a, self.max_a, p_ay)
+            p_m = self.proposalJump(m, self.min_m, self.max_m, p_m)
+
             for comm in range(self.communities):
                 p_flow1[comm] = self.proposalJump(flow1[comm],flowlim[0],flowlim[1], p_flow1[comm]) 
                 p_flow2[comm] = self.proposalJump(flow2[comm],flow1[comm], flowlim[1], p_flow2[comm])
@@ -654,7 +650,7 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples= 100
+    # samples= 100
     # description = raw_input('Enter description: ')
     description = 'depth-based likelihood, self.likelihoodWithProps'
     assemblage = 3
@@ -718,7 +714,7 @@ def main():
     print 'Successfully sampled'
     
     
-    burnin = 0.1 * samples  # use post burn in samples
+    burnin = 0.15 * samples  # use post burn in samples
     pos_v = pos_v[int(burnin):, ]
     pos_sed1 = pos_sed1[int(burnin):, ]
     pos_sed2 = pos_sed2[int(burnin):, ]
@@ -766,6 +762,7 @@ def main():
     
     # JODIE: REDEFINE NEW PLOTTING FOR DEPTH ONLY
     plotResults.plotPosCore(filename,pos_samples_d,pos_samples_t,gt_vec_d,gt_vec_t,gt_depths,gt_timelay,x_tick_labels,x_tick_values, mcmc.font)
+    plotResults.plotPosCoreDepth(filename, pos_samples_d, gt_vec_d, gt_depths, x_tick_labels, x_tick_values, mcmc.font)
     plotResults.boxPlots(nCommunities, pos_v, sedsim, flowsim, mcmc.font,mcmc.width,filename)    
     plotResults.plotLiklAndDiff(pos_likl, pos_diff, sample_range, mcmc.font, filename)
     plotResults.plotParameters(mcmc.filename, assemblage, sample_range, mcmc.sedsim, mcmc.flowsim, mcmc.communities, 
