@@ -277,21 +277,31 @@ class MCMC():
         pr_flow = np.zeros((samples , communities))
         pr_sed = np.zeros((samples , communities))
 
-        sed1 = [0.0002, 0.0010, 0.0015]
-        sed2 = [0.0012, 0.0019, 0.0028]
-        sed3 = [0.0020, 0.0023, 0.0039]
-        sed4 = [0.0022, 0.0048, 0.0055]
-        flow1=[0.063, 0.003 ,0.]
-        flow2=[0.097, 0.086, 0.]
-        flow3=[0.229, 0.182, 0.036]
-        flow4=[0.398, 0.199, 0.079]
+        sed1 = [0.0001, 0.0015, 0.0023]   # manually set inital values nearby true ones
+        sed2 = [0.0012, 0.0017, 0.0024]
+        sed3 = [0.0018, 0.0028, 0.0027]
+        sed4 = [0.0020, 0.0031, 0.0043]
+        flow1=[0.050, 0.008 ,0.]
+        flow2=[0.078, 0.051, 0.]
+        flow3=[0.250, 0.172, 0.058]
+        flow4=[0.270, 0.185, 0.066]
 
-        # cm_ax = self.true_ax
-        # pos_ax[0] = cm_ax
-        # cm_ay = self.true_ay
-        # pos_ay[0] = cm_ay
-        # m = self.true_m
-        # pos_m[0] = m
+
+        '''p_sed1_true=[0.0009, 0.0015, 0.0023]
+        p_sed2_true=[0.0015, 0.0017, 0.0024]
+        p_sed3_true=[0.0016, 0.0028, 0.0027]
+        p_sed4_true=[0.0017, 0.0031, 0.0043]
+        p_flow1_true=[0.055, 0.008 ,0.]
+        p_flow2_true=[0.082, 0.051, 0.]
+        p_flow3_true=[0.259, 0.172, 0.058]
+        p_flow4_true=[0.288, 0.185, 0.066]'''
+
+        #cm_ax = self.true_ax   # for 11 param experiments, we assign cm matrix to true initial value, to make search less difficult. cm are free params for 11 param exp
+        #pos_ax[0] = cm_ax
+        #cm_ay = self.true_ay
+        #pos_ay[0] = cm_ay
+        #m = self.true_m
+        #pos_m[0] = m
 
         cm_ax = np.random.uniform(self.min_a,self.max_a)
         pos_ax[0] = cm_ax

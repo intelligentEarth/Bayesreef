@@ -1,0 +1,4 @@
+38.56 % was accepted
+Successfully sampled
+Mean diff: 2.4849240358395006 , standard deviation: 0.8811038799797406
+
