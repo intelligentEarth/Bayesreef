@@ -447,7 +447,7 @@ def main():
     #    Set all input parameters    #
 
     # USER DEFINED: parameter names and plot titles.
-    samples= 100
+    samples= 6400
     titles = ['Shallow', 'Mod-deep', 'Deep']
     assemblage= 2
     sedlim = [0., 0.005]

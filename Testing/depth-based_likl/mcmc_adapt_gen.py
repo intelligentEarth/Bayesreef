@@ -234,12 +234,18 @@ class MCMC():
     
     def computeCovariance(self, i, pos_v):
         cov_mat = np.cov(pos_v[:i,].T)
+
+
+
         # np.savetxt('cov_mat_%s.txt' %(), cov_mat )
-        cov_noise = self.prop_step*np.identity(cov_mat.shape[0], dtype = float)
+        cov_noise = (self.prop_step * self.prop_step)*np.identity(cov_mat.shape[0], dtype = float)
         covariance = np.add(cov_mat, cov_noise)        
         L = np.linalg.cholesky(covariance)
         self.cholesky = L
+
         self.cov_init = True
+
+        return cov_mat, cov_noise
 
     def sampler(self):
         samples = self.samples
@@ -269,9 +275,11 @@ class MCMC():
         pos_ax = np.zeros(samples)
         pos_ay = np.zeros(samples)
         pos_m = np.zeros(samples)
-        pos_ax = np.zeros(samples)
-        pos_ay = np.zeros(samples)
-        pos_m = np.zeros(samples)
+
+        num_accepted = np.zeros(samples)
+
+        diff_proposals = np.zeros((samples , 3))
+
         pos_samples_d = np.zeros((samples, gt_vec_d.shape[0]))
         pos_samples_t = np.zeros((samples, gt_vec_t.shape[0]))
         pr_flow = np.zeros((samples , communities))
@@ -296,12 +304,18 @@ class MCMC():
         p_flow3_true=[0.259, 0.172, 0.058]
         p_flow4_true=[0.288, 0.185, 0.066]'''
 
-        #cm_ax = self.true_ax   # for 11 param experiments, we assign cm matrix to true initial value, to make search less difficult. cm are free params for 11 param exp
-        #pos_ax[0] = cm_ax
-        #cm_ay = self.true_ay
-        #pos_ay[0] = cm_ay
-        #m = self.true_m
-        #pos_m[0] = m
+        '''cm_ax = -0.05   # for 11 param experiments, we assign cm matrix to true initial value, to make search less difficult. cm are free params for 11 param exp
+        pos_ax[0] = cm_ax
+        cm_ay = -0.06
+        pos_ay[0] = cm_ay
+        m = 0.11
+        pos_m[0] = m'''
+
+
+        #true_m = 0.08
+        #true_ax = -0.01
+        #true_ay = -0.03
+
 
         cm_ax = np.random.uniform(self.min_a,self.max_a)
         pos_ax[0] = cm_ax
@@ -420,7 +434,8 @@ class MCMC():
                 # print 'self. cholesky', self.cholesky
                 # print ' v _ prop', v_proposal   
                 v_p = np.random.normal(size = v_proposal.shape)
-                v_proposal_cov = v_proposal + np.dot(self.cholesky,v_p)
+                x = np.dot(self.cholesky,v_p)
+                v_proposal_cov = v_proposal + x
                 p_sed1[0:self.communities] = v_proposal_cov[0:3]
                 p_sed2[0:self.communities] = v_proposal_cov[3:6]
                 p_sed3[0:self.communities] = v_proposal_cov[6:9]
@@ -433,11 +448,16 @@ class MCMC():
                 p_ay = v_proposal_cov[25]
                 p_m = v_proposal_cov[26]
 
+                diff_proposals[i,:] = x[24:]
+
                 print '\n using cov \n'
             else:  # classic random walk
-                p_ax = cm_ax + np.random.normal(0, self.step_a)
-                p_ay = cm_ay + np.random.normal(0, self.step_a)
-                p_m = m + np.random.normal(0, self.step_m)
+                ax_ = np.random.normal(0, self.step_a)
+                p_ax = cm_ax + ax_
+                ay_ = np.random.normal(0, self.step_a)
+                p_ay = cm_ay + ay_ 
+                m_  = np.random.normal(0, self.step_m)
+                p_m = m + m_
 
                 for comm in range(self.communities):
                     p_flow1[comm] = flow1[comm] + np.random.normal(0, self.step_flow)
@@ -448,6 +468,8 @@ class MCMC():
                     p_sed2[comm] = sed2[comm] + np.random.normal(0, self.step_sed)
                     p_sed3[comm] = sed3[comm] + np.random.normal(0, self.step_sed)
                     p_sed4[comm] = sed4[comm] + np.random.normal(0, self.step_sed) 
+
+                diff_proposals[i,:] =  np.array([ax_, ay_, m_])
 
                 print '\n using rw \n '
             # frozen_assemparams # 0 means a,a,m and 1 means that assemble 2 and 3 are frozen to true (makes 11 params) , 2 would mean that only assemble 3 is frozen (makes 19 free params) and 3 would mean that all are free   (makes 27 free params)            
@@ -547,11 +569,15 @@ class MCMC():
             # mh_prob = min(1, math.exp(diff_likelihood))
             u = random.uniform(0, 1)
             print 'u', u, 'and mh_probability', mh_prob
+
+            num_accepted[i] = naccept
             
             if u < mh_prob: # accept
                 #   Update position
                 print i, ' is accepted sample','   - number of accepted : ', naccept
                 naccept += 1
+
+                
                 count_list.append(i)
                 likelihood = likelihood_proposal
                 c_cs_prod = p_cs_prod
@@ -639,7 +665,15 @@ class MCMC():
                 self.saveCore(reef, i+1)
             if i in range(cov_start, samples, cov_interval) :
                 print 'cov computed = i ',i, '\n'
-                self.computeCovariance(i,pos_v)
+                cov_mat, cov_noise = self.computeCovariance(i,pos_v)
+
+                print(cov_mat[24:27,24:27], ' cov_mat') 
+
+                print(cov_noise[24:27,24:27], ' cov_noise')
+
+                print(self.cholesky[24:27,24:27], ' cholesky')
+
+
 
         accepted_count =  len(count_list)   
         print accepted_count, ' number accepted'
@@ -652,7 +686,7 @@ class MCMC():
 
         return (pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
             pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m, 
-            accept_ratio, accepted_count,x_tick_labels, x_tick_values)
+            accept_ratio, accepted_count,x_tick_labels, x_tick_values, diff_proposals, num_accepted)
 
 #####################################################################
 
@@ -720,7 +754,7 @@ def main():
 
     [pos_v, pos_diff, pos_likl, pos_samples_t, pos_samples_d, pos_sed1,pos_sed2,pos_sed3,pos_sed4,
     pos_flow1,pos_flow2,pos_flow3,pos_flow4, pos_ax,pos_ay,pos_m,
-    accept_ratio, accepted_count,x_tick_labels, x_tick_values] = mcmc.sampler()
+    accept_ratio, accepted_count,x_tick_labels, x_tick_values, diff_proposals, num_accepted] = mcmc.sampler()
     print 'Successfully sampled'
     
     
@@ -757,7 +791,7 @@ def main():
     if not os.path.isfile(('%s/pos_burnin_GLVE.csv' % (filename))):
         np.savetxt("%s/pos_burnin_GLVE.csv" % (filename), np.c_[pos_m,pos_ax,pos_ay], delimiter=',')
 
-    if not os.path.isfile(('%s/pos_burnin_sed.csv' % (filename))):
+    '''if not os.path.isfile(('%s/pos_burnin_sed.csv' % (filename))):
         np.savetxt("%s/pos_burnin_sed.csv" % (filename), np.c_[pos_sed1,pos_sed2,pos_sed3, pos_sed4], delimiter=',')
 
     if not os.path.isfile(('%s/pos_burnin_flow.csv' % (filename))):
@@ -767,7 +801,16 @@ def main():
         np.savetxt("%s/pos_burnin_likl.csv" % (filename), pos_likl, delimiter=',')
 
     if not os.path.isfile(('%s/pos_burnin_proposal.csv' % (filename))):
-        np.savetxt("%s/pos_burnin_proposal.csv" % (filename), pos_v, delimiter=',')
+        np.savetxt("%s/pos_burnin_proposal.csv" % (filename), pos_v, delimiter=',')'''
+
+    if not os.path.isfile(('%s/diff_pro.csv' % (filename))):
+        np.savetxt("%s/diff_pro.csv" % (filename), diff_proposals, delimiter=',')
+
+
+    if not os.path.isfile(('%s/num_accepted.csv' % (filename))):
+        np.savetxt("%s/num_accepted.csv" % (filename), num_accepted, delimiter=',')
+
+
     sample_range = np.arange(burnin+1,samples+1, 1)
     
     # JODIE: REDEFINE NEW PLOTTING FOR DEPTH ONLY
