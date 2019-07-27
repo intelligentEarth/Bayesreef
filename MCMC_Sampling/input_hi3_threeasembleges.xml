@@ -67,6 +67,8 @@
 			<production>0.009</production> <!-- prev, 10. current, 10-->
 		</species>
 
+		 <?ignore
+
 		<!-- Community definition -->
 		<species>
 			<!-- Community name needs to be lower than 10 characters -->
@@ -105,7 +107,7 @@
 			<!-- Community maximum production rate for considered Community [m/y]. -->
 			<production>0.009</production> <!-- prev, 9. current, 10.-->
 		</species>
-		
+		   ?>
         <!-- Community matrix representing the interactions between community.
            αij is the interaction coefficient among the community association i and j ,
            (a particular case is αii, the interaction of one community association with itself).
@@ -118,6 +120,8 @@
                           0.      0.      0.001  -0.001  -0.001
                           0.      0.      0.      0.001  -0.001
         -->
+
+     
     <communityMatrix>
       <!-- Interaction for community 1 -->
       <value col="0" row="0">-0.0005</value>

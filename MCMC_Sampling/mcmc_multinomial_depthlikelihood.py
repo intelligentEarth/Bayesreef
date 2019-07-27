@@ -49,6 +49,9 @@ class MCMC():
     def run_Model(self, reef, input_vector):
         reef.convert_vector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
         self.initial_sed, self.initial_flow = reef.load_xml(self.input, self.sedsim, self.flowsim)
+
+
+        print(self.initial_sed, self.initial_flow , '   * initial sed and initial flow')
         if self.vis[0] == True:
             reef.core.initialSetting(size=(8,2.5), size2=(8,3.5)) # View initial parameters
         reef.run_to_time(self.simtime,showtime=100.)

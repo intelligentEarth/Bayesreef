@@ -167,7 +167,7 @@ class xmlParser:
             id = 0
             for facies in litho.iter('species'):
                 if id >= self.speciesNb:
-                    raise ValueError('The number of species does not match the number of defined ones.')
+                    raise ValueError(id, self.speciesNb, 'The number of species does not match the number of defined ones.')
                 element = None
                 element = facies.find('name')
                 if element is not None:
