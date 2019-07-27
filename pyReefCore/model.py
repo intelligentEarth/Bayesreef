@@ -334,7 +334,165 @@ class Model(object):
         print '\t Matrix main:', x, 'and sub-/super:', y
         print '\t Malthus.:', tempParam
         
-        return 
+        return
+
+
+    def convert_vector(self, communities, input_vector, sedsim, flowsim, verbose=False):
+        # print 'input vector: ', input_vector
+        new_shape = communities*4
+        if (sedsim == True) and (flowsim == False):
+            self.opt_Sed = input_vector[0:new_shape].reshape(4,communities)
+            self.opt_Sed = self.opt_Sed.T
+            x = input_vector[new_shape]
+            y = input_vector[new_shape+1]
+            diagmat = np.zeros((communities, communities))
+            np.fill_diagonal(diagmat, x)
+            for i in range(0, communities - 1):
+                diagmat[i][i + 1] = y
+                diagmat[i + 1][i] = y
+            self.opt_cMatrix = diagmat
+            tempParam= float(input_vector[new_shape+2])
+            self.opt_malthusParam = np.full(communities, tempParam)
+            # self.opt_malthusParam = np.ones(communities)
+            # for i in range(0,self.opt_malthusParam.shape[0]):
+            #     self.opt_malthusParam[i] = float(tempParam)
+        elif (flowsim == True) and (sedsim == False):
+            self.opt_Flow = input_vector[0:new_shape].reshape(4,communities)
+            self.opt_Flow = self.opt_Flow.T
+            x = input_vector[new_shape]
+            y = input_vector[new_shape+1]
+            diagmat = np.zeros((communities, communities))
+            np.fill_diagonal(diagmat, x)
+            for i in range(0, communities - 1):
+                diagmat[i][i + 1] = y
+                diagmat[i + 1][i] = y
+            self.opt_cMatrix = diagmat
+            tempParam= float(input_vector[new_shape+2])
+            self.opt_malthusParam = np.full(communities, tempParam)
+        elif (sedsim == True) and (flowsim == True):
+            self.opt_Sed = input_vector[0:new_shape].reshape(4,communities)
+            self.opt_Flow = input_vector[new_shape:(new_shape*2)].reshape(4,communities)
+            self.opt_Sed = self.opt_Sed.T
+            self.opt_Flow = self.opt_Flow.T
+            x = input_vector[new_shape*2]
+            y = input_vector[(new_shape*2)+1]
+            diagmat = np.zeros((communities, communities))
+            np.fill_diagonal(diagmat, x)
+            for i in range(0, communities - 1):
+                diagmat[i][i + 1] = y
+                diagmat[i + 1][i] = y
+            self.opt_cMatrix = diagmat
+            tempParam= float(input_vector[(new_shape*2)+2])
+            self.opt_malthusParam = np.full(communities, tempParam)
+        optf = self.opt_Flow
+        opts = self.opt_Sed
+        optCM = self.opt_cMatrix
+        optMP = self.opt_malthusParam
+
+        print 'New parameters:'
+        # print '\t Sed:\n', opts
+        # print '\t Flow:\n', optf
+        print '\t Matrix main:', x, 'and sub-/super:', y
+        print '\t Malthus.:', tempParam
+        
+        return
+
+    def convert_core(self, communities, output_core, core_depths):
+        # print 'output_core', output_core
+        predicted_core = np.zeros(core_depths.size)    
+        if (communities == 3): 
+            comm_1 = output_core[0,:].flatten()
+            comm_2 = output_core[1,:].flatten()
+            comm_3 = output_core[2,:].flatten()
+            sed = output_core[3,:].flatten()
+            comms_at_depth = np.zeros((core_depths.size, communities+1))
+            for i in range(0,core_depths.size):
+                comms_at_depth[i,0] = comm_1[i]
+                comms_at_depth[i,1] = comm_2[i]
+                comms_at_depth[i,2] =comm_3[i]
+                comms_at_depth[i,3] = sed[i]
+            for n in range(0,core_depths.size):
+                index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
+                # print 'no:', n, 'index',index,'value',value
+                if index == 0 and value != 0:
+                    predicted_core[n] = 0.143
+                elif index == 1:
+                    predicted_core[n] = 0.286
+                elif index == 2:
+                    predicted_core[n] = 0.429
+                elif index == 3:
+                    predicted_core[n] = 0.571
+                else:
+                    predicted_core[n] = 0
+            # print 'predicted_core', predicted_core
+        
+        elif (communities == 6): # and (self.opt_malthusParam != []):
+            comm_1 = output_core[0,:].flatten()
+            comm_2 = output_core[1,:].flatten()
+            comm_3 = output_core[2,:].flatten()
+            comm_4 = output_core[3,:].flatten()
+            comm_5 = output_core[4,:].flatten()
+            comm_6 = output_core[5,:].flatten()
+            sed = output_core[6,:].flatten()
+            comms_at_depth = np.zeros((core_depths.size, communities+1)) #initialise array 
+            
+            for i in range(0,core_depths.size):
+                comms_at_depth[i,0] = comm_1[i]
+                comms_at_depth[i,1] = comm_2[i]
+                comms_at_depth[i,2] =comm_3[i]
+                comms_at_depth[i,3] = comm_4[i]
+                comms_at_depth[i,4] = comm_5[i]
+                comms_at_depth[i,5] = comm_6[i]
+                comms_at_depth[i,6] = sed[i]
+            # print 'Final comms_at_depth', comms_at_depth
+            
+            for n in range(0,core_depths.size):
+                index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
+                # print 'no:', n, 'index',index,'value',value
+                if index == 0 and value != 0:
+                    predicted_core[n] = 0.143
+                elif index == 1:
+                    predicted_core[n] = 0.286
+                elif index == 2:
+                    predicted_core[n] = 0.429
+                elif index == 6:
+                    predicted_core[n] = 0.571
+                elif index == 3:
+                    predicted_core[n] = 0.714
+                elif index == 4:
+                    predicted_core[n] = 0.857
+                elif index == 5:
+                    predicted_core[n] = 1.0
+                else:
+                    predicted_core[n] = 0
+            # print 'predicted_core', predicted_core
+
+        # elif (communities == 6) and (self.opt_malthusParam == []):
+        #      for n in range(0,core_depths.size):
+        #         index, value = max(enumerate(comms_at_depth[n]), key=operator.itemgetter(1))
+        #         # print 'no:', n, 'index',index,'value',value
+        #         if index == 0 and value != 0:
+        #             predicted_core[n] = 0.143
+        #         elif index == 1:
+        #             predicted_core[n] = 0.286
+        #         elif index == 2:
+        #             predicted_core[n] = 0.429
+        #         elif index == 3:
+        #             predicted_core[n] = 0.571
+        #         elif index == 4:
+        #             predicted_core[n] = 0.714
+        #         elif index == 5:
+        #             predicted_core[n] = 0.857
+        #         elif index == 6:
+        #             predicted_core[n] = 1.0
+        #         else:
+        #             predicted_core[n] = 0
+        #     print 'predicted_core', predicted_core
+        else:
+            print 'No predicted core made'
+
+        return predicted_core
+      
 
     """
     Function to convert the core to a 1D vector of discrete numbers to represent

@@ -44,7 +44,7 @@ import argparse
 
 
 #Initialise and parse inputs
-parser=argparse.ArgumentParser(description='PTBayeslands modelling')
+parser=argparse.ArgumentParser(description='Bayesreef modelling')
 
 parser.add_argument('-s','--samples', help='Number of samples', default=10000, dest="samples",type=int)
 parser.add_argument('-cs','--cov_start', help='Covariance calculation start', default=50, dest="cov_start",type=int)
@@ -705,6 +705,24 @@ def main():
     gt_timelay, gt_vec_t = np.genfromtxt('data/synthdata_t_vec_08_1.txt', usecols=(0, 1), unpack = True)
     gt_prop_d = np.loadtxt(synth_prop, usecols=(1,2,3,4))
     gt_timelay = gt_timelay[::-1]
+
+
+
+
+    print(gt_depths, ' gt depths')
+    print(gt_vec_d, ' gt_vec_d') 
+
+    print(gt_timelay, ' gt_timelay') 
+    print(gt_vec_t, ' gt_vec_t')
+
+    print(gt_prop_d, ' gt_prop_d')
+
+    
+
+
+
+
+
     # use_cov = False
     nCommunities = 3
     simtime = 8500

@@ -1,0 +1,26 @@
+Community matrix:
+         a0      a1      a2
+a0j -0.0005 -0.0001  0.0000
+a1j -0.0001 -0.0005 -0.0001
+a2j  0.0000 -0.0001 -0.0005
+
+Community maximum production rates [m/y]:
+         Prod.
+W1-Shal  0.011
+W2-Mod   0.012
+W3-Deep  0.009
+
+Community depth functions [m]:
+[[  0.   0.   6.  12.]
+ [  4.   6.  20.  22.]
+ [ 18.  20.  30.  32.]]
+
+Community sediment tolerance functions [m/year]:
+[[ 0.      0.      0.0016  0.003 ]
+ [ 0.0015  0.0018  0.0024  0.003 ]
+ [ 0.0023  0.0026  0.004   0.0045]]
+
+Community flow tolerance functions [m/sec]:
+[[ 0.05  0.06  0.3   0.4 ]
+ [ 0.    0.05  0.08  0.12]
+ [ 0.    0.    0.04  0.08]]

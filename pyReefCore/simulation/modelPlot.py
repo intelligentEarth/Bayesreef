@@ -278,6 +278,50 @@ class modelPlot():
         # # print 'sedH', self.sedH.shape, self.sedH #4*171
         return propn_asmb_time.T, self.timeLay
 
+    def core_timetodepth(self, communities, core_depths):
+        ids = np.where(self.depth[:-1]>0)[0]
+        p2 = np.zeros((self.sedH.shape))
+        p2[:,ids] = self.sedH[:,ids]/self.depth[ids]
+        # print ' p2[0,:].size',  p2[0,:].size
+        # print 'p2[1,:]', p2[1,:]
+        # print ' p2[2,:]',  p2[2,:]
+        # print ' p2[3,:]',  p2[3,:]
+        # print ' p2[4,:]',  p2[4,:]
+        # print ' p2[5,:]',  p2[5,:]
+        # print ' p2[6,:]',  p2[6,:]
+
+        bottom = self.surf + self.depth[:-1].sum()
+        d = bottom - np.cumsum(self.depth[:-1])
+        # print 'depth [...', d[-2:], ']'
+
+        counter = 0
+        max_depth=np.amax(core_depths)
+        depth_incrementor = max_depth
+        output_core = np.zeros((communities+1, core_depths.size))
+        depth_increment = 0.2 
+        id_prev = 999
+        idx = 0
+
+
+        for i in range (0,len(core_depths)):
+            if not ((np.sum(p2[:,i]) == 0) and (depth_incrementor == -0.1)): 
+            # as long as there is growth and the core is not filled
+            # if not ((np.sum(p2[0:communities,i]) == 0) and (p2[communities,i] == 1)):
+                idx = (np.abs(d-depth_incrementor)).argmin()
+                # print 'idx:', idx
+                if not ((idx == d.size-1) and (idx == id_prev)):
+                    # print i, 'of ', len(core_depths)
+                    # as long as idx has a corresponding value that is not the end of the core
+                    # print 'current depth_incrementor', depth_incrementor, 'm'
+                    output_core[:,counter] = p2[:,idx]
+                    # print 'p2[:,idx]    output_core[:,counter]\n', output_core[:,counter]
+                    counter += 1
+                    # print 'counter: ', counter
+                    depth_incrementor -= depth_increment
+                    # print 'next depth', depth_incrementor, 'm \n\n'
+                    id_prev=idx
+        return output_core
+
     # def getTimePlotParameters(self, colors=None):
     #     return self.timeCarb, self.pop, self.names
     
