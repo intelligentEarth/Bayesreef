@@ -796,9 +796,7 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples=100
-    description = ''
-    nCommunities = 3
+    samples=50000
 
     problem = 2  # 1. is synthetic core, 2. is Henon island real core 3. OTI (to be tested later)
 
@@ -825,6 +823,10 @@ def main():
     	#datafile = 'data/synth_core.txt'
     	#core_depths = np.genfromtxt(datafile, usecols=(0), unpack = True) 
     	#core_data = np.loadtxt('data/synth_core_bi.txt')
+
+
+    description = ''
+    nCommunities = 3
 
 
 
