@@ -22,7 +22,7 @@ c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
-    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput, sedsim, sedlimits, flowsim, flowlimits, vis, true_vec_parameters, problem):
+    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput,   vis, true_vec_parameters, problem):
         self.filename = filename
         self.input = xmlinput
         self.communities = communities
@@ -31,10 +31,12 @@ class MCMC():
         self.core_depths = core_depths
         self.timestep = timestep
         self.vis = vis
-        self.sedsim = sedsim
-        self.flowsim = flowsim
-        self.sedlimits = sedlimits
-        self.flowlimits = flowlimits
+        self.sedsim = True
+        self.flowsim = True
+        
+        self.sedlimits = []
+        self.flowlimits = []
+
         self.simtime = simtime
         self.font = 10
         self.width = 1
@@ -58,7 +60,7 @@ class MCMC():
         self.true_values = true_vec_parameters
         self.problem = problem
 
-        self.num_chains = 2
+        self.num_chains = 1
         self.maxtemp = 2
 
         self.adapttemp = 1
@@ -304,9 +306,26 @@ class MCMC():
         loss = np.log(z)
         # print 'sum of loss:', np.sum(loss)        
         return [np.sum(loss) *(1.0/self.adapttemp), pred_core, diff]
+
+    def save_core(self,reef,naccept):
+        path = '%s/%s' % (self.filename, naccept)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        
+        #     Initial settings     #
+        reef.core.initialSetting(size=(8,2.5), size2=(8,4.5), dpi=300, fname='%s/a_thres_%s_' % (path, naccept))        
+        #      Community population evolution    #
+        reef.plot.speciesDepth(colors=self.colors, size=(8,4), font=8, dpi=300, fname =('%s/b_popd_%s.png' % (path,naccept)))
+        reef.plot.speciesTime(colors=self.colors, size=(8,4), font=8, dpi=300,fname=('%s/c_popt_%s.png' % (path,naccept)))
+        reef.plot.accomodationTime(size=(8,4), font=8, dpi=300, fname =('%s/d_acct_%s.pdf' % (path,naccept)))
+        
+        #      Draw core      #
+        reef.plot.drawCore(lwidth = 3, colsed=self.colors, coltime = self.colors2, size=(9,8), font=8, dpi=300, 
+                           figname=('%s/e_core_%s' % (path, naccept)), filename=('%s/core_%s.csv' % (path, naccept)), sep='\t')
+        return
         
     
-    def save_core(self,reef,naccept):
+    '''def save_core(self,reef,naccept):
         path = '%s/%s' % (self.filename, naccept)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -335,9 +354,39 @@ class MCMC():
         #     merger.append(PdfFileReader(file(pdf, 'rb')))
         # merger.write('output_%s.pdf' % (naccept))       
         
-        return
+        return'''
 
     def initial_replicaproposal(self): 
+
+        """"Windward sedlim = 0.005, flowlim = 0.3
+            sedlim_1 = [[0., 0.0035]]
+            sedlim_2 = [[0.001,0.0035]]
+            sedlim_3 = [[0.001,0.005]]
+            sedlim_4 = sedlim_5 = sedlim_6 = [[0.,0.]] 
+            # sedlim_4 = [[0.001,0.0035]]
+            # sedlim_5 = [[0.002,0.004]]
+            # sedlim_6 = [[0.002,0.005]]
+            flowlim_1 = [[0.02,0.3]]
+            flowlim_2 = [[0.005.,0.2]]
+            flowlim_3 = [[0.,0.15]]
+            flowlim_4 = [[0.005,0.2]]
+            flowlim_5 = [[0.002,0.1]]
+            flowlim_6 = [[0.,0.1]]
+            Leeward sedlim = 0.005, flowlim = 0.2
+            # sedlim_1 = [[0.0005,0.0035]]
+            # sedlim_2 = [[0,1e-3]]
+            # sedlim_3 = [[0,2e-4]]
+            sedlim_1 = sedlim_2 = sedlim_3 = [[0.,0.]] 
+            sedlim_4 = [[0.0005,0.0035]]
+            sedlim_5 = [[0.0005, 0.003]]
+            sedlim_6 = [[0. 0.005]]
+            flowlim_1 = [[0.05,0.3]]
+            flowlim_2 = [[0.05,0.3]]
+            flowlim_3 = [[0,0.2]]
+            flowlim_4 = [[0.01,0.3]]
+            flowlim_5 = [[0,0.2]]
+            flowlim_6 = [[0,0.1]]
+        """
 
         sed1 = np.zeros(self.communities)
         sed2 = np.zeros(self.communities)
@@ -380,6 +429,19 @@ class MCMC():
         cm_ax   = np.random.uniform(self.max_a,0.)
         cm_ay  = np.random.uniform(self.max_a,0.)
         m   = np.random.uniform(0.,self.max_m)
+
+        sedlim_1 = [[0., 0.0035]]
+        sedlim_2 = [[0.001,0.0035]]
+        sedlim_3 = [[0.001,0.005]]
+
+        flowlim_1 = [[0.01,0.3]]
+        flowlim_2 = [[0.,0.2]]
+        flowlim_3 = [[0.,0.1]]
+
+
+ 
+        self.sedlimits = np.concatenate((sedlim_1,sedlim_2,sedlim_3))#sedlim_4,sedlim_5,sedlim_6)) 
+        self.flowlimits = np.concatenate((flowlim_1,flowlim_2,flowlim_3))#flowlim_4,flowlim_5,flowlim_6))'''
 
 
         glv_pro = np.array([cm_ax,cm_ay,m])
@@ -496,9 +558,9 @@ class MCMC():
             temp_ladder.append(temp)
             temp += tmpr_rate
 
-        #temp_ladder = [1, 1.05, 1.1, 1.15 , 1.2, 1.4, 1.5, 1.7, 1.9, 2.5]
+        temp_ladder = [1, 1.05, 1.1, 1.15 , 1.2, 1.3, 1.4, 1.6, 1.9, 2.5]
 
-        temp_ladder = [1, 1 , 1 , 1  , 1 , 1 , 1 , 1 , 1 , 1 ]
+        #temp_ladder = [1, 1 , 1 , 1  , 1 , 1 , 1 , 1 , 1 , 1 ]
 
         return   temp_ladder
 
@@ -525,7 +587,7 @@ class MCMC():
 
 
         burnin = int(0.1 * samples)
-        pt_stage = int(0.5 * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
+        pt_stage = int(0.8 * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
         swap_interval = 1 # when to check to swap 
 
         with file(('%s/description.txt' % (self.filename)),'a') as outfile:
@@ -537,6 +599,7 @@ class MCMC():
         
  
         rep_likelihood = np.zeros(nreplicas)
+        rep_likelihood_pro = np.zeros(nreplicas)
         rep_predcore = np.zeros((nreplicas, samples ))
         rep_diffscore = np.zeros((nreplicas, samples ))
 
@@ -564,6 +627,9 @@ class MCMC():
         m = 0
         cm_ax = 0
         cm_ay = 0
+
+
+        #self.save_core(reef, 'initial')
 
 
 
@@ -607,17 +673,21 @@ class MCMC():
                 
                 print '\nSample - Replica  ', i, r
 
-                v_proposal = self.proposal_vec(v_current)  
+                v_proposal = self.proposal_vec(v_current) 
+
+                self.adapttemp =  temp_ladder[r] 
 
                 if i < pt_stage: 
                     self.adapttemp =  temp_ladder[r]
-                    #likelihood_proposal = likelihood_proposal *(1.0/temp_ladder[r])
+                    #likelihood_proposal = rep_likelihood_pro[r] *(1.0/temp_ladder[r])
+                    #rep_likelihood_pro[r] = likelihood_proposal
+                else:
+                    self.adapttemp = 1
 
         
  
                 #print(v_proposal, ' proposal ')
                 if i == pt_stage and init_count ==0: 
-                    self.adapttemp = 1
                     print ' moving to mcmc sampling ------------------  **** ------'
                     likelihood, rep_predcore_, diffscore  = self.likelihood_func(reef, self.core_data, v_proposal)
                     rep_likelihood[r] = likelihood
@@ -625,9 +695,11 @@ class MCMC():
 
                 likelihood_proposal, rep_predcore_, diffscore  = self.likelihood_func(reef, self.core_data, v_proposal)
 
+                rep_likelihood_pro[r] = likelihood_proposal
+
  
-                diff_likelihood = likelihood_proposal - rep_likelihood[r] # to divide probability, must subtract
-                print 'likelihood_proposal:', likelihood_proposal, 'diff_likelihood',diff_likelihood, ' diff_score', diffscore
+                diff_likelihood = rep_likelihood_pro[r] - rep_likelihood[r] # to divide probability, must subtract
+                print 'likelihood_proposal:',  rep_likelihood_pro[r] , 'diff_likelihood',diff_likelihood, ' diff_score', diffscore
 
 
                 mh_prob = min(1, math.exp(diff_likelihood))
@@ -656,9 +728,9 @@ class MCMC():
 
                     list_predcore[r,i+1,:] = self.convert_core_format(rep_predcore_, self.communities)
                     
-                    print  i, 'likelihood:', likelihood_proposal, ' and difference score:',  diffscore, 'accepted'
+                    print  i, 'likelihood:', likelihood_proposal, ' and difference score:',  diffscore,   naccept[r] , 'accepted'
 
-                    print v_proposal, ' accepted proposal *** '
+                    #print v_proposal, ' accepted proposal *** '
 
  
                
@@ -669,7 +741,7 @@ class MCMC():
                     list_predcore[r,i+1,:] = list_predcore[r,i,:]
                     #rep_diffscore[r,i +1] = rep_diffscore[r,i]
  
-                    print i, 'rejected and retained'
+                    print i,  naccept[r] , 'rejected and retained'
 
             print ' time to check swap --------------------------------------- *'
 
@@ -688,10 +760,7 @@ class MCMC():
 
                 print s, lhood1, lhood2, swap_proposal, u , lhood2 - lhood1, '   s, lhood1, lhood2, swap_proposal, u, lhood2 - lhood1 '
                 if u < swap_proposal:  
-                    temp =  replica_pro[s-1,:] 
-                    #param1 = replica_pro[s,:] 
-                    #param2 = param_temp
-
+                    temp =  replica_pro[s-1,:]   
                     replica_pro[s-1,:] = replica_pro[s,:].copy()
                     replica_pro[s,:] = temp.copy()
 
@@ -709,8 +778,9 @@ class MCMC():
         print naccept, ' list accepted '
 
  
-        print np.sum(naccept)/ (self.samples ), '% was accepted'
         accept_ratio = np.sum(naccept)/ (self.samples * 1.0) * 100
+
+        print  accept_ratio, '% was accepted'
 
         burn_pos = replicapos_v[:,burnin:,:] 
         burn_listpred = list_predcore[:,burnin:,:]
@@ -727,6 +797,8 @@ class MCMC():
 
         #print self.true_values
 
+        diffscore = rep_diffscore[:,burnin:]
+
 
         for s in range( 0, num_param):  
             print self.true_values[s]  
@@ -737,7 +809,7 @@ class MCMC():
 
  
 
-        return (rep_diffscore, accept_ratio, posterior, predcore_list,  x_data, y_data, data_vec, rep_acceptlist, rep_likelihoodlist)
+        return (rep_diffscore, accept_ratio, posterior, predcore_list,  x_data, y_data, data_vec, rep_acceptlist, rep_likelihoodlist, diffscore, total_time/3600)
 
 
     def plot_figure(self, list, title, real_value, nreplicas  ): 
@@ -797,7 +869,7 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples=50
+    samples=10
     problem = 1 # 1. is synthetic core, 2. is Henon island real core 3. OTI (to be tested later)
     num_param = 27
 
@@ -835,8 +907,8 @@ def main():
 
 
 
-    vis = [False, False] # first for initialisation, second for cores
-    sedsim, flowsim = True, True
+    vis = [True, True] # first for initialisation, second for cores
+    #sedsim, flowsim = True, True
     run_nb = 0
     while os.path.exists('results_multinomial_%s' % (run_nb)):
         run_nb+=1
@@ -855,65 +927,29 @@ def main():
             outfile.write(description)
             outfile.write('\nSpecifications')
             outfile.write('\n\tmcmc.py')
-            outfile.write('\n\tSimulation time: {0} yrs'.format(simtime))
-            outfile.write('\n\tSediment simulated: {0}'.format(sedsim))
-            outfile.write('\n\tFlow simulated: {0}'.format(flowsim))
+            outfile.write('\n\tSimulation time: {0} yrs'.format(simtime)) 
             outfile.write('\n\tNo. samples: {0}'.format(samples))
             outfile.write('\n\tXML input: {0}'.format(xmlinput))
             outfile.write('\n\tData file: {0}'.format(datafile))
-    """"Windward sedlim = 0.005, flowlim = 0.3
-            sedlim_1 = [[0., 0.0035]]
-            sedlim_2 = [[0.001,0.0035]]
-            sedlim_3 = [[0.001,0.005]]
-            sedlim_4 = sedlim_5 = sedlim_6 = [[0.,0.]] 
-            # sedlim_4 = [[0.001,0.0035]]
-            # sedlim_5 = [[0.002,0.004]]
-            # sedlim_6 = [[0.002,0.005]]
-            flowlim_1 = [[0.02,0.3]]
-            flowlim_2 = [[0.005.,0.2]]
-            flowlim_3 = [[0.,0.15]]
-            flowlim_4 = [[0.005,0.2]]
-            flowlim_5 = [[0.002,0.1]]
-            flowlim_6 = [[0.,0.1]]
-        Leeward sedlim = 0.005, flowlim = 0.2
-            # sedlim_1 = [[0.0005,0.0035]]
-            # sedlim_2 = [[0,1e-3]]
-            # sedlim_3 = [[0,2e-4]]
-            sedlim_1 = sedlim_2 = sedlim_3 = [[0.,0.]] 
-            sedlim_4 = [[0.0005,0.0035]]
-            sedlim_5 = [[0.0005, 0.003]]
-            sedlim_6 = [[0. 0.005]]
-            flowlim_1 = [[0.05,0.3]]
-            flowlim_2 = [[0.05,0.3]]
-            flowlim_3 = [[0,0.2]]
-            flowlim_4 = [[0.01,0.3]]
-            flowlim_5 = [[0,0.2]]
-            flowlim_6 = [[0,0.1]]
-    """
-    ##### max/min values for each assemblage #####
-    sedlim_1 = [[0., 0.0035]]
-    sedlim_2 = [[0.001,0.0035]]
-    sedlim_3 = [[0.001,0.005]]
-
-    flowlim_1 = [[0.01,0.3]]
-    flowlim_2 = [[0.,0.2]]
-    flowlim_3 = [[0.,0.1]]
     
-    sedlimits = []
-    flowlimits = []
-
-    if sedsim == True:
-        sedlimits = np.concatenate((sedlim_1,sedlim_2,sedlim_3))#sedlim_4,sedlim_5,sedlim_6))
-    if flowsim == True:
-        flowlimits = np.concatenate((flowlim_1,flowlim_2,flowlim_3))#flowlim_4,flowlim_5,flowlim_6))
+  
 
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, timestep,  filename, xmlinput, 
-                sedsim, sedlimits, flowsim,flowlimits, vis, true_vec_parameters, problem)
+                vis, true_vec_parameters, problem)
 
 
-    rep_diffscore, accept_ratio, pos_v, predcore_list, x_data, y_data, data_vec, rep_acceptlist, rep_likelihoodlist,  = mcmc.sampler()
+    rep_diffscore, accept_ratio, pos_v, predcore_list, x_data, y_data, data_vec, rep_acceptlist, rep_likelihoodlist, diffscore, time_taken  = mcmc.sampler()
 
     print 'successfully sampled'
+
+    score = diffscore.flatten()
+
+    mean_score = np.mean(score)
+    std_score = np.std(score)
+
+    print  mean_score, std_score, accept_ratio, time_taken, '  mean score, std score, accept_ratio, time'
+
+    np.savetxt(filename+'/score_summary.txt', [mean_score, std_score, accept_ratio, time_taken], fmt='%1.2f') 
 
 
 
@@ -933,12 +969,55 @@ def main():
     plt.savefig( filename+'/rep_diffscore.png')
     plt.clf()
 
-    print(rep_diffscore, ' rep_diffscore')
+    #print(rep_diffscore, ' rep_diffscore')
 
 
-    np.savetxt(filename+'/rep_diffscore.txt', rep_diffscore, fmt='%1.2f')  
+    np.savetxt(filename+'/rep_diffscore.txt', diffscore, fmt='%1.2f')  
     np.savetxt(filename+'/predcore_list.txt', predcore_list, fmt='%1.2f')  
     np.savetxt(filename+'/posterior.txt', pos_v, fmt='%1.4e')
+
+    sed_pos = pos_v[0:12,:]
+    #print sed_pos, sed_pos.shape
+    flow_pos = pos_v[12:24,:]
+    glv_pos =   pos_v[24:,]
+ 
+
+
+    mpl_fig = plt.figure()
+    ax = mpl_fig.add_subplot(111) 
+    size = 12 
+    ax.tick_params(labelsize=size) 
+    plt.legend(loc='upper right')  
+    ax.boxplot(sed_pos.T) 
+    ax.set_xlabel('Parameter ID', fontsize=size)
+    ax.set_ylabel('Sediment Posterior', fontsize=size) 
+    plt.title("Boxplot of Sediment Posterior", fontsize=size) 
+    plt.savefig(filename+'/sed_pos.pdf')
+    plt.clf()
+
+
+    mpl_fig = plt.figure()
+    ax = mpl_fig.add_subplot(111) 
+    size = 12
+    ax.tick_params(labelsize=size)
+    ax.boxplot(flow_pos.T) 
+    ax.set_xlabel('Parameter ID', fontsize=size)
+    ax.set_ylabel('Flow Posterior', fontsize=size) 
+    plt.title("Boxplot of Flow Posterior", fontsize=size) 
+    plt.savefig(filename+'/flow_pos.pdf')
+    plt.clf()
+
+
+    mpl_fig = plt.figure()
+    ax = mpl_fig.add_subplot(111) 
+    size = 12 
+    ax.tick_params(labelsize=size)
+    ax.boxplot(glv_pos.T) 
+    ax.set_xlabel('Parameter ID', fontsize=size)
+    ax.set_ylabel('GLV Posterior', fontsize=size) 
+    plt.title("Boxplot of GLV Posterior", fontsize=size) 
+    plt.savefig(filename+'/glv_pos.pdf')
+    plt.clf()
 
 
 
