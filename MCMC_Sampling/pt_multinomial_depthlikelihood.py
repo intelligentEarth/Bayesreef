@@ -22,7 +22,7 @@ c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
 class MCMC():
-    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput,   vis, true_vec_parameters, problem):
+    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput,   vis, true_vec_parameters, problem, num_replica, max_temp):
         self.filename = filename
         self.input = xmlinput
         self.communities = communities
@@ -38,7 +38,7 @@ class MCMC():
         self.flowlimits = []
 
         self.simtime = simtime
-        self.font = 10
+        self.font = 4
         self.width = 1
         self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
         self.initial_sed = []
@@ -60,8 +60,8 @@ class MCMC():
         self.true_values = true_vec_parameters
         self.problem = problem
 
-        self.num_chains = 1
-        self.maxtemp = 2
+        self.num_chains = num_replica
+        self.maxtemp = max_temp
 
         self.adapttemp = 1
         self.temperature = 1 
@@ -260,6 +260,17 @@ class MCMC():
             vec[n] = idx+1 # +1 so that zero is preserved as 'none'
         return vec
 
+
+    def diffScore(self, sim_data,synth_data,intervals):
+        maxprop = np.zeros((intervals,sim_data.shape[1]))
+        for n in range(intervals):
+            idx_synth = np.argmax(synth_data[n,:])
+            idx_sim = np.argmax(sim_data[n,:])
+            if ((sim_data[n,self.communities] != 1.) and (idx_synth == idx_sim)): #where sediment !=1 and max proportions are equal:
+                maxprop[n,idx_synth] = 1
+        diff = (1- float(np.count_nonzero(maxprop))/intervals)*100
+        return diff
+
     def diff_score(self, z,intervals):
         same= np.count_nonzero(z)
         same = float(same)/intervals
@@ -277,35 +288,80 @@ class MCMC():
         diff = (1- float(np.count_nonzero(maxprop))/intervals)*100
         return diff'''
 
-    def rmse(self, predictions, targets):
+    def give_weight(self, arr):   
+        index_array = np.zeros(arr.shape[0]) 
+        for i in range(0, arr.shape[0]): 
+            if (arr[i] == 0): 
+                index_array[i] = 1
+            elif (arr[i] == 1): 
+                index_array[i] = 0.75
+            elif (arr[i] == 2): 
+                index_array[i] = 0.5
+            else:  
+                index_array[i] = 0.25
+
+        return index_array
+
+
+    def convertmat_assemindex(self, arr):   
+        index_array = np.zeros(arr.shape[0]) 
+        for i in range(0, arr.shape[0]): 
+            for j in range(0, arr.shape[1]):  
+                if (arr[i][j] == 1): 
+                    index_array[i] = j 
+        return index_array
+
+    def score_updated(self, predictions, targets):
         # where there is 1 in the sed column, count
-        sed = np.count_nonzero(predictions[:,self.communities])
+
+        predictions = np.where(predictions > 0.5, 1, 0) 
+
+        p = self.convertmat_assemindex(predictions) #predictions.dot(1 << np.arange(predictions.shape[-1])) 
+
+        a =  self.convertmat_assemindex(self.core_data)  
+ 
+        '''sed = np.count_nonzero(predictions[:,self.communities])
         p_sedprop = (float(sed)/predictions.shape[0])
-        sedprop = np.absolute((self.d_sedprop - p_sedprop)*0.5)
-        rmse =(np.sqrt(((predictions - targets) ** 2).mean()))*0.5
+        sedprop = np.absolute((self.d_sedprop - p_sedprop)*0.5)'''
+
+        diff = np.absolute( p-a)
+        print diff, ' diff abs'
+
+        weight_array = self.give_weight(diff)
+
+        score = np.sum(weight_array)/weight_array.shape[0]
+ 
+        #rmse =(np.sqrt(((p - a) ** 2).mean()))*0.5
+
+
         
-        return rmse + sedprop
+        return (1- score) * 100  #+ sedprop 
+
 
     def likelihood_func(self, reef, core_data, input_v):
         pred_core = self.run_Model(reef, input_v)
         pred_core = pred_core.T
         intervals = pred_core.shape[0]
-        z = np.zeros((intervals,self.communities+1))    
+        z = np.zeros((intervals,self.communities+1))   
+
+        #print(z, intervals, ' is z int') 
         for n in range(intervals):
             idx_data = np.argmax(core_data[n,:])
             idx_model = np.argmax(pred_core[n,:])
             if ((pred_core[n,self.communities] != 1.) and (idx_data == idx_model)): #where sediment !=1 and max proportions are equal:
                 z[n,idx_data] = 1
         diff = self.diff_score(z,intervals)
-        rmse = self.rmse(pred_core, core_data)
 
-        print(diff, rmse, ' diff and rmse ....')
+        #diff = self.diffScore(sim_prop_d,gt_prop_d, intervals)
+        diff_ = self.score_updated(pred_core, core_data)
+
+        print(diff, diff_, ' diff and new diff....')
         
         z = z + 0.1
         z = z/(1+(1+self.communities)*0.1)
         loss = np.log(z)
         # print 'sum of loss:', np.sum(loss)        
-        return [np.sum(loss) *(1.0/self.adapttemp), pred_core, diff]
+        return [np.sum(loss) *(1.0/self.adapttemp), pred_core, diff_]
 
     def save_core(self,reef,naccept):
         path = '%s/%s' % (self.filename, naccept)
@@ -558,9 +614,9 @@ class MCMC():
             temp_ladder.append(temp)
             temp += tmpr_rate
 
-        temp_ladder = [1, 1.05, 1.1, 1.15 , 1.2, 1.3, 1.4, 1.6, 1.9, 2.5]
+        #temp_ladder = [1, 1.05, 1.1, 1.15 , 1.2, 1.3, 1.4, 1.6, 1.9, 2.5]
 
-        #temp_ladder = [1, 1 , 1 , 1  , 1 , 1 , 1 , 1 , 1 , 1 ]
+        temp_ladder = [1, 1 , 1 , 1  , 1 , 1 , 1 , 1 , 1 , 1 ]
 
         return   temp_ladder
 
@@ -586,8 +642,10 @@ class MCMC():
 
 
 
-        burnin = int(0.1 * samples)
-        pt_stage = int(0.8 * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
+        burnin = int(0.4 * samples)
+        #pt_stage = int(0.99 * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
+        pt_stage = int(0.9 * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
+      
         swap_interval = 1 # when to check to swap 
 
         with file(('%s/description.txt' % (self.filename)),'a') as outfile:
@@ -869,9 +927,15 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples=10
-    problem = 1 # 1. is synthetic core, 2. is Henon island real core 3. OTI (to be tested later)
+
+
+    samples=20000
     num_param = 27
+
+    num_replica = 10
+    max_temp = 2.5
+
+    problem = 2 # 1. is synthetic core, 2. is Henon island real core 3. OTI (to be tested later)
 
     true_vec_parameters = np.zeros(num_param)
 
@@ -935,7 +999,7 @@ def main():
   
 
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, timestep,  filename, xmlinput, 
-                vis, true_vec_parameters, problem)
+                vis, true_vec_parameters, problem, num_replica, max_temp)
 
 
     rep_diffscore, accept_ratio, pos_v, predcore_list, x_data, y_data, data_vec, rep_acceptlist, rep_likelihoodlist, diffscore, time_taken  = mcmc.sampler()
