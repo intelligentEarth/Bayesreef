@@ -1,0 +1,12 @@
+Test Description
+
+Specifications
+	mcmc.py
+	Simulation time: 8500 yrs
+	No. samples: 20000
+	XML input: input_hi3_threeasembleges.xml
+	Data file: data/hi3.txt
+	step_m: 0.02
+	step_a: 0.02
+	step_sed: 0.001
+	step_flow: 0.05

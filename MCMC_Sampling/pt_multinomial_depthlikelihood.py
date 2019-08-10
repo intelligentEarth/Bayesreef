@@ -10,6 +10,8 @@ import time
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+
+from matplotlib import ticker
 import matplotlib.mlab as mlab
 from pyReefCore.model import Model
 import fnmatch
@@ -21,8 +23,10 @@ cmap=plt.cm.Set2
 c = cycler('color', cmap(np.linspace(0,1,8)) )
 plt.rcParams["axes.prop_cycle"] = c
 
+config = 2 # for parameter limits config
+
 class MCMC():
-    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput,   vis, true_vec_parameters, problem, num_replica, max_temp):
+    def __init__(self, simtime, samples, communities, core_data, core_depths,timestep,filename, xmlinput,   vis, true_vec_parameters, problem, num_replica, max_temp, burn_in, pt_stage):
         self.filename = filename
         self.input = xmlinput
         self.communities = communities
@@ -43,19 +47,7 @@ class MCMC():
         self.d_sedprop = float(np.count_nonzero(core_data[:,self.communities]))/core_data.shape[0]
         self.initial_sed = []
         self.initial_flow = []
-        self.step_m = 0.02 
-        self.step_a = 0.02  
-        #self.step_sed = 0.0001 
-        #self.step_flow = 0.0015
-
-        self.step_sed = 0.001 
-        self.step_flow = 0.05
-
-        self.max_a = -0.15
-        self.max_m = 0.15
-
-        self.sedlim = [0., 0.005]
-        self.flowlim = [0.,0.3]
+   
 
         self.true_values = true_vec_parameters
         self.problem = problem
@@ -65,6 +57,49 @@ class MCMC():
 
         self.adapttemp = 1
         self.temperature = 1 
+
+        self.burn_in = burn_in
+        self.pt_stage = pt_stage
+
+        if config ==1:
+            self.step_m = 0.1 
+            self.step_a = 0.02   
+
+            self.step_sed = 0.005 
+            self.step_flow = 0.1 
+
+            self.max_a = -0.15 
+            self.max_m = 0.25
+
+            self.sedlim = [0., 0.01]
+            self.flowlim = [0.,0.5]
+        elif config == 2: 
+            self.step_m = 0.2
+            self.step_a = 0.2  
+
+            self.step_sed = 0.01 
+            self.step_flow = 0.2 
+
+            self.max_a = -0.5 
+            self.max_m = 0.5
+
+            self.sedlim = [0., 0.05]
+            self.flowlim = [0.,1] 
+        else: 
+            self.step_m = 0.02 
+            self.step_a = 0.02 
+
+            self.max_a = -0.15
+            self.max_m = 0.15
+
+            self.sedlim = [0., 0.005]
+            self.flowlim = [0.,0.3]
+
+            self.step_sed = 0.001 
+            self.step_flow = 0.05
+
+
+
 
     def run_Model(self, reef, input_vector):
         reef.convert_vector(self.communities, input_vector, self.sedsim, self.flowsim) #model.py
@@ -168,16 +203,25 @@ class MCMC():
                 ax = fig.add_subplot(111)
                 ax.set_facecolor('#f2f2f3')
                 if self.problem ==1:
-                    ax.plot(self.initial_sed[a,:], cy, linestyle='--', linewidth=self.width, marker='.',color='k', label='True value')
-                ax.plot(cmu, cy, linestyle='-', linewidth=self.width,marker='.', color='sandybrown', label='Estimated')
+                    ax.plot(self.initial_sed[a,:], cy, linestyle='--', linewidth=self.width, marker='.',color='k', label='True')
+                ax.plot(cmu, cy, linestyle='-', linewidth=self.width,marker='.', color='sandybrown', label='Estimate')
                 ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1, color='darksalmon',mfc='darksalmon',fmt='.',label=None)
                 ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1, color='sienna',mfc='sienna',fmt='.',label=None)
-                plt.title('Sediment exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=self.font+2, y=1.06)
-                plt.ylabel('Proportion of maximum growth rate [%]',size=self.font+1)
-                plt.xlabel('Sediment input [m/year]',size=self.font+1)
+
+                ax.tick_params(axis='both', which='major', labelsize=10)
+                ax.tick_params(axis='both', which='minor', labelsize=10)
+
+                ax.set_xlabel("Sediment input (m/year)", fontsize=11)
+                ax.set_ylabel("Max. growth rate", fontsize=11) 
+                
+
+
+                plt.title('Sediment exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=11, y=1.06)
+                #plt.ylabel('Proportion of maximum growth rate [%]',size=self.font+1)
+                #plt.xlabel('Sediment input [m/year]',size=self.font+1)
                 plt.ylim(-2.,110)
-                lgd = plt.legend(frameon=False, prop={'size':self.font+1}, bbox_to_anchor = (1.,0.2))
-                plt.savefig('%s/sediment_response_%s.png' % (self.filename, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=False)
+                lgd = plt.legend(frameon=False, prop={'size':10}, bbox_to_anchor = (1.,0.2))
+                plt.savefig('%s/sediment_response_%s.pdf' % (self.filename, a+1), bbox_extra_artists=(lgd,),bbox_inches='tight',dpi=300,transparent=False)
                 plt.clf()
 
         flow1_mu, flow1_ub,flow1_lb, flow2_mu, flow2_ub,flow2_lb, flow3_mu, flow3_ub,flow3_lb, flow4_mu, flow4_ub,flow4_lb = (np.zeros(self.communities) for i in range(12))
@@ -236,21 +280,33 @@ class MCMC():
 
                 
                 fig = plt.figure(figsize=(6,4))
+
+                params = {'legend.fontsize': 15, 'legend.handlelength': 2}
+                plt.rcParams.update(params)
                 ax = fig.add_subplot(111)
                 ax.set_facecolor('#f2f2f3')
                 if self.problem ==1:
-                    ax.plot(self.initial_flow[a,:], cy, linestyle='--', linewidth=self.width, marker='.', color='k',label='True value')
-                ax.plot(cmu, cy, linestyle='-', linewidth=self.width, marker='.', color='steelblue', label='Estimated')
+                    ax.plot(self.initial_flow[a,:], cy, linestyle='--', linewidth=self.width, marker='.', color='k',label='True')
+                ax.plot(cmu, cy, linestyle='-', linewidth=self.width, marker='.', color='steelblue', label='Estimate')
                 ax.errorbar(cmu[0:2],cy[0:2],xerr=[c_lb[0:2],c_ub[0:2]],capsize=5,elinewidth=1,color='lightsteelblue',mfc='lightsteelblue',fmt='.',label=None)
                 ax.errorbar(cmu[2:4],cy[2:4],xerr=[c_lb[2:4],c_ub[2:4]],capsize=5,elinewidth=1,color='lightslategrey',mfc='lightslategrey',fmt='.',label=None)
-                plt.title('Hydrodynamic energy exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=self.font+2, y=1.06)
-                plt.ylabel('Proportion of maximum growth rate [%]', size=self.font+1)
-                plt.xlabel('Fluid flow [m/sec]', size=self.font+1)
+
+                ax.tick_params(axis='both', which='major', labelsize=10)
+                ax.tick_params(axis='both', which='minor', labelsize=10)
+
+                ax.set_xlabel("Fluid flow (m/sec)", fontsize=11)
+                ax.set_ylabel("Max. growth rate", fontsize=11) 
+
+                plt.title('Hydrodynamic energy exposure threshold function\n(%s assemblage)' % (a_labels[a]), size=11, y=1.06)
+                #plt.ylabel('Proportion of maximum growth rate [%]', size=self.font+1)
+                #plt.xlabel('Fluid flow [m/sec]', size=self.font+1)
                 plt.ylim(-2.,110.)
-                lgd = plt.legend(frameon=False, prop={'size':self.font+1}, bbox_to_anchor = (1.,0.2))
-                plt.savefig('%s/flow_response_%s.png' % (self.filename, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
+                lgd = plt.legend(frameon=False, prop={'size':10}, bbox_to_anchor = (1.,0.2))
+                plt.savefig('%s/flow_response_%s.pdf' % (self.filename, a+1),  bbox_extra_artists=(lgd,), bbox_inches='tight',dpi=300,transparent=False)
                 plt.clf()
 
+ 
+ 
         
 
     def convert_core_format(self, core, communities):
@@ -293,12 +349,8 @@ class MCMC():
         for i in range(0, arr.shape[0]): 
             if (arr[i] == 0): 
                 index_array[i] = 1
-            elif (arr[i] == 1): 
-                index_array[i] = 0.75
-            elif (arr[i] == 2): 
-                index_array[i] = 0.5
             else:  
-                index_array[i] = 0.25
+                index_array[i] = 0 
 
         return index_array
 
@@ -514,8 +566,8 @@ class MCMC():
         size_sed = 4 * self.communities
         size_flow = 4 * self.communities
 
-        max_a = -0.1
-        max_m = 0.1
+        max_a = self.max_a
+        max_m = self.max_m
 
  
 
@@ -614,9 +666,9 @@ class MCMC():
             temp_ladder.append(temp)
             temp += tmpr_rate
 
-        #temp_ladder = [1, 1.05, 1.1, 1.15 , 1.2, 1.3, 1.4, 1.6, 1.9, 2.5]
+        temp_ladder = [1, 1.05, 1.1, 1.15 , 1.2, 1.3, 1.4, 1.6, 1.9, 2.5]
 
-        temp_ladder = [1, 1 , 1 , 1  , 1 , 1 , 1 , 1 , 1 , 1 ]
+        #temp_ladder = [1, 1 , 1 , 1  , 1 , 1 , 1 , 1 , 1 , 1 ]
 
         return   temp_ladder
 
@@ -642,9 +694,9 @@ class MCMC():
 
 
 
-        burnin = int(0.4 * samples)
+        burnin = int(self.burn_in * samples)
         #pt_stage = int(0.99 * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
-        pt_stage = int(0.9 * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
+        pt_stage = int(self.pt_stage * samples) # paralel tempering is used only for exploration, it does not form the posterior, later mcmc in parallel is used with swaps 
       
         swap_interval = 1 # when to check to swap 
 
@@ -860,8 +912,8 @@ class MCMC():
 
         for s in range( 0, num_param):  
             print self.true_values[s]  
-            print s
-            self.plot_figure(posterior[s,:], 'pos_distri_'+str(s), 0 , nreplicas ) 
+            
+            self.plot_figure(posterior[s,:], 'pos_distri_'+str(s),  self.true_values[s] , nreplicas ) 
 
         self.pos_sedflow(posterior) 
 
@@ -877,10 +929,12 @@ class MCMC():
          
 
 
-        size = 15
+        size = 14
+
+        #fig, ax = plt.subplots()
 
 
-        plt.tick_params(labelsize=size)
+        '''plt.tick_params(labelsize=size)
         params = {'legend.fontsize': size, 'legend.handlelength': 2}
         plt.rcParams.update(params)
         plt.grid(alpha=0.75)
@@ -893,12 +947,42 @@ class MCMC():
         plt.ylabel(' Frequency ', fontsize = size)
         if self.problem == 1:
             plt.axvline(x=real_value, linewidth=2, color='r')
+            print real_value, ' is real'
+        #plt.tight_layout()  
+        #ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        plt.autoscale()'''
+
+
+        fig, ax = plt.subplots()
+   
+
+
+        ax.hist(list_points,    bins=20, rwidth=0.9,   color='#607c8e')
+ 
+        ax.tick_params(axis="x", labelsize=14)
+        ax.tick_params(axis="y", labelsize=14)
+        #ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.3f}')) 
+
+
+        fmtr = ticker.StrMethodFormatter(('{x:,g}'))
+        ax.yaxis.set_major_formatter(fmtr)
+ 
+        ax.yaxis.set_minor_formatter(ticker.StrMethodFormatter('{x:.3f}'))
+
+        ax.set_xlabel("Parameter", fontsize=15)
+        ax.set_ylabel("Frequency", fontsize=15) 
+
+        if self.problem == 1:
+            plt.axvline(x=real_value, linewidth=2, color='b')
+ 
+        
+        ax.grid(linestyle='-', linewidth='0.2', color='grey')
         plt.tight_layout()  
         plt.savefig(fname   +'/posterior/'+ title  + '_posterior.pdf')
         plt.clf()
 
 
-        plt.tick_params(labelsize=size)
+        '''plt.tick_params(labelsize=size)
         params = {'legend.fontsize': size, 'legend.handlelength': 2}
         plt.rcParams.update(params)
         plt.grid(alpha=0.75)
@@ -909,7 +993,31 @@ class MCMC():
         plt.title("Parameter trace plot", fontsize = size)
         plt.xlabel(' Number of Samples  ', fontsize = size)
         plt.ylabel(' Parameter value ', fontsize = size)
+        #plt.tight_layout()  
+        plt.autoscale()'''
+
+
+        #p = np.linspace(1000, 500, 100)
+        #T = np.linspace(300, 200, p.size)
+
+
+        fig, ax = plt.subplots()
+
+        listx = np.asarray(np.split(list_points,  nreplicas ))
+        ax.plot(listx.T)    
+
+        ax.tick_params(axis="x", labelsize=14)
+        ax.tick_params(axis="y", labelsize=14)
+        ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.3f}')) 
+ 
+        ax.yaxis.set_minor_formatter( ticker.StrMethodFormatter(('{x:,g}')) )
+  
+        ax.set_xlabel("Iterations", fontsize=15)
+        ax.set_ylabel("Parameter", fontsize=15) 
+        
+        ax.grid(linestyle='-', linewidth='0.2', color='grey')
         plt.tight_layout()  
+
         plt.savefig(fname  +'/posterior/'+ title  + '_trace.pdf')
         plt.clf()
 
@@ -929,11 +1037,14 @@ def main():
     random.seed(time.time())
 
 
-    samples=20000
+    samples=60000
     num_param = 27
 
     num_replica = 10
     max_temp = 2.5
+
+    burn_in = 0.5
+    pt_stage = 0.95
 
     problem = 2 # 1. is synthetic core, 2. is Henon island real core 3. OTI (to be tested later)
 
@@ -948,6 +1059,8 @@ def main():
     	core_data = np.loadtxt('data/synth_core_bi.txt')
 
         true_vec_parameters = np.loadtxt('data/true_values.txt')
+
+        print true_vec_parameters, ' true values'
 
     elif problem ==2:
     	simtime = 8500
@@ -993,13 +1106,15 @@ def main():
             outfile.write('\n\tmcmc.py')
             outfile.write('\n\tSimulation time: {0} yrs'.format(simtime)) 
             outfile.write('\n\tNo. samples: {0}'.format(samples))
+
+            outfile.write('\n\tNo. chains: {0}'.format(num_replica))
             outfile.write('\n\tXML input: {0}'.format(xmlinput))
             outfile.write('\n\tData file: {0}'.format(datafile))
     
   
 
     mcmc = MCMC(simtime, samples, nCommunities, core_data, core_depths, timestep,  filename, xmlinput, 
-                vis, true_vec_parameters, problem, num_replica, max_temp)
+                vis, true_vec_parameters, problem, num_replica, max_temp, burn_in, pt_stage)
 
 
     rep_diffscore, accept_ratio, pos_v, predcore_list, x_data, y_data, data_vec, rep_acceptlist, rep_likelihoodlist, diffscore, time_taken  = mcmc.sampler()
@@ -1110,7 +1225,7 @@ def main():
     print fx_mu.shape, '  mean pred'
     print fx_high.shape, '  high'
 
-    fig = plt.figure(figsize=(3,6))
+    '''fig = plt.figure(figsize=(3,6))
     plt.plot(data_vec, x_data,label='Reef-core ground-truth', color='k')
     plt.plot(fx_mu,x_data, label='Model Pred. (mean)',linewidth=1,linestyle='--')
     plt.plot(fx_low, x_data, label='Model  Pred. (5th percentile)',linewidth=1,linestyle='--')
@@ -1126,7 +1241,38 @@ def main():
     plt.xticks(x_tick_values, x_tick_labels,rotation=70, fontsize=mcmc.font+1)
     plt.legend(frameon=False, prop={'size':mcmc.font+1}, bbox_to_anchor = (1.,0.2))
     plt.savefig('%s/predictions.png' % (filename), bbox_inches='tight', dpi=300,transparent=False)
-    plt.clf()
+    plt.clf()'''
+
+    font = 8
+
+    x_labels = ['Shallow', 'Mod-deep', 'Deep', 'Sediment','No growth']
+    x_values = [1,2,3,4,5]
+
+
+    fig = plt.figure(figsize=(4,4))
+    suptitle = fig.suptitle('')
+    params = {'legend.fontsize': size, 'legend.handlelength': 2}
+    plt.rcParams.update(params)
+    ax1 = fig.add_subplot(121)
+    ax1.set_facecolor('#f2f2f3')
+    ax1.plot(data_vec, x_data, label='Ground truth', color='k',linewidth=0.7)
+    ax1.plot(fx_mu, x_data, label='Pred. (mean)',linestyle='--', linewidth=0.7)
+    ax1.plot(fx_high, x_data, label='Pred. (5th percentile)',linestyle='--',linewidth=0.7)
+    ax1.plot(fx_low, x_data, label='Pred. (95th percentile)',linestyle='--',linewidth=0.7)
+    ax1.fill_betweenx(x_data, fx_low, fx_high, facecolor='mediumaquamarine', alpha=0.4)
+    ax1.set_ylabel('Depth (meters)')
+    ax1.set_ylim([0,np.amax(core_depths)])
+    ax1.set_ylim(ax1.get_ylim()[::-1])
+    ax1.set_xticks(x_values)
+    ax1.set_xticklabels(x_labels, rotation=70)
+    ax1.tick_params(axis='both', which='major', labelsize=8)
+    ax1.tick_params(axis='both', which='minor', labelsize=8)
+ 
+
+    lgd = fig.legend(frameon=False,bbox_to_anchor = (0.45,0.19), borderpad=2., prop={'size':font-1})
+    plt.tight_layout(pad=2.5)
+    fig.savefig('%s/core_prediction.pdf' % (filename), bbox_extra_artists=(lgd,suptitle), bbox_inches='tight',dpi=200,transparent=False)
+    plt.close('all')
 
 
 
