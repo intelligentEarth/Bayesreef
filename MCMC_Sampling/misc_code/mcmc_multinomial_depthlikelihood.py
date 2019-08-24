@@ -796,9 +796,9 @@ def main():
     
     #    Set all input parameters    #
     random.seed(time.time())
-    samples=50000
+    samples=50 
 
-    problem = 2  # 1. is synthetic core, 2. is Henon island real core 3. OTI (to be tested later)
+    problem = 1 # 1. is synthetic core, 2. is Henon island real core 3. OTI (to be tested later)
 
     if problem ==1:
     	simtime = 8500
