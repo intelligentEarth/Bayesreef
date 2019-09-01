@@ -1,0 +1,2 @@
+Accept ratio: 25.92 %
+Samples accepted : 10000

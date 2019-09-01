@@ -1,0 +1,13 @@
+Test Description
+
+Specifications
+	mcmc.py
+	Simulation time: 8500 yrs
+	No. samples: 20000
+	No. chains: 10
+	XML input: input_oti5.xml
+	Data file: data/oti5.txt
+	step_m: 0.1
+	step_a: 0.02
+	step_sed: 0.005
+	step_flow: 0.1

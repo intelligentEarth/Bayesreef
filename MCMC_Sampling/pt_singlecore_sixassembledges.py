@@ -1063,7 +1063,7 @@ def main():
 
     samples=20000  
 
-    num_replica = 10
+    num_replica = 10  # 1 replica means single chain MCMC
     max_temp = 2.5
 
     burn_in = 0.5
